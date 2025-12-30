@@ -1,0 +1,6 @@
+[tools]
+erlang = "28"
+node = "22"
+elixir = "1.19"
+[env]
+DATABASE_ADAPTER = "postgresql"
