@@ -5,7 +5,98 @@ import Config
 # system starts, so it is typically used to load production configuration
 # and secrets from environment variables or elsewhere. Do not define
 # any compile-time configuration in here, as it won't be applied.
-# The block below contains prod specific runtime configuration.
+
+# Database adapter selection
+# Defaults to SQLite for simplicity and ease of self-hosting
+db_adapter = System.get_env("DATABASE_ADAPTER", "sqlite") |> String.to_atom()
+
+IO.puts(
+  "DEBUG: DATABASE_ADAPTER env var = #{inspect(System.get_env("DATABASE_ADAPTER"))}, parsed = #{inspect(db_adapter)}"
+)
+
+# Map adapter to repo module (handle both "postgres" and "postgresql")
+repo_module =
+  case db_adapter do
+    :sqlite ->
+      FuzzyRss.RepoSQLite
+
+    :mysql ->
+      FuzzyRss.RepoMySQL
+
+    :postgresql ->
+      FuzzyRss.RepoPostgres
+
+    invalid ->
+      raise """
+      Invalid DATABASE_ADAPTER: #{inspect(invalid)}
+
+      Supported values are: sqlite, mysql, postgresql, postgres
+
+      Set the DATABASE_ADAPTER environment variable to one of the supported values.
+      Example: DATABASE_ADAPTER=postgresql mix phx.server
+      """
+  end
+
+# SQLite configuration (always available)
+sqlite_db_name =
+  case config_env() do
+    :test -> "priv/fuzzy_rss_test#{System.get_env("MIX_TEST_PARTITION")}.db"
+    _ -> System.get_env("SQLITE_DATABASE_URL") || "priv/fuzzy_rss_dev.db"
+  end
+
+sqlite_config = [
+  adapter: Ecto.Adapters.SQLite3,
+  database: sqlite_db_name,
+  priv: "priv/repo"
+]
+
+# MySQL configuration (always available)
+mysql_db_suffix =
+  case config_env() do
+    :test -> "fuzzy_rss_test#{System.get_env("MIX_TEST_PARTITION")}"
+    _ -> "fuzzy_rss_dev"
+  end
+
+mysql_url =
+  System.get_env("MYSQL_DATABASE_URL") ||
+    "mysql://root:mysql@localhost/#{mysql_db_suffix}"
+
+mysql_config = [
+  adapter: Ecto.Adapters.MyXQL,
+  url: mysql_url,
+  pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
+  ssl: String.to_existing_atom(System.get_env("DATABASE_SSL", "false")),
+  priv: "priv/repo"
+]
+
+# PostgreSQL configuration (always available)
+postgres_db_suffix =
+  case config_env() do
+    :test -> "fuzzy_rss_test#{System.get_env("MIX_TEST_PARTITION")}"
+    _ -> "fuzzy_rss_dev"
+  end
+
+postgres_url =
+  System.get_env("POSTGRES_DATABASE_URL") ||
+    "ecto://postgres:postgres@localhost/#{postgres_db_suffix}"
+
+postgres_config = [
+  adapter: Ecto.Adapters.Postgres,
+  url: postgres_url,
+  pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
+  ssl: String.to_existing_atom(System.get_env("DATABASE_SSL", "false")),
+  priv: "priv/repo"
+]
+
+# Configure only the selected repo
+case repo_module do
+  FuzzyRss.RepoSQLite -> config :fuzzy_rss, FuzzyRss.RepoSQLite, sqlite_config
+  FuzzyRss.RepoMySQL -> config :fuzzy_rss, FuzzyRss.RepoMySQL, mysql_config
+  FuzzyRss.RepoPostgres -> config :fuzzy_rss, FuzzyRss.RepoPostgres, postgres_config
+end
+
+# Store the selected repo module for use throughout the app
+config :fuzzy_rss, :repo_module, repo_module
 
 # ## Using releases
 #
@@ -21,18 +112,10 @@ if System.get_env("PHX_SERVER") do
 end
 
 if config_env() == :prod do
-  database_url =
-    System.get_env("DATABASE_URL") ||
-      raise """
-      environment variable DATABASE_URL is missing.
-      For example: ecto://USER:PASS@HOST/DATABASE
-      """
-
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 
   config :fuzzy_rss, FuzzyRss.Repo,
     # ssl: true,
-    url: database_url,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
     # For machines with several cores, consider starting multiple pools of `pool_size`
     # pool_count: 4,

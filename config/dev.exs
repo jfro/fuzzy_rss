@@ -1,14 +1,11 @@
 import Config
 
-# Configure your database
+# Database configuration is handled by config/runtime.exs
+# DATABASE_ADAPTER env var works for all environments there
+# Development debugging settings:
 config :fuzzy_rss, FuzzyRss.Repo,
-  username: "root",
-  password: "",
-  hostname: "localhost",
-  database: "fuzzy_rss_dev",
   stacktrace: true,
-  show_sensitive_data_on_connection_error: true,
-  pool_size: 10
+  show_sensitive_data_on_connection_error: true
 
 # For development, we disable any cache and enable
 # debugging and code reloading.

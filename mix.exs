@@ -11,7 +11,36 @@ defmodule FuzzyRss.MixProject do
       aliases: aliases(),
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+      # Only include the selected repo based on DATABASE_ADAPTER
+      ecto_repos: selected_repos()
+    ]
+  end
+
+  defp selected_repos do
+    case System.get_env("DATABASE_ADAPTER", "sqlite") |> String.to_atom() do
+      :sqlite -> [FuzzyRss.RepoSQLite]
+      :mysql -> [FuzzyRss.RepoMySQL]
+      :postgresql -> [FuzzyRss.RepoPostgres]
+      :postgres -> [FuzzyRss.RepoPostgres]
+      _ -> [FuzzyRss.RepoSQLite]
+    end
+  end
+
+  defp test_alias do
+    repo =
+      case System.get_env("DATABASE_ADAPTER", "sqlite") |> String.to_atom() do
+        :sqlite -> "FuzzyRss.RepoSQLite"
+        :mysql -> "FuzzyRss.RepoMySQL"
+        :postgresql -> "FuzzyRss.RepoPostgres"
+        :postgres -> "FuzzyRss.RepoPostgres"
+        _ -> "FuzzyRss.RepoSQLite"
+      end
+
+    [
+      "ecto.create --quiet -r #{repo}",
+      "ecto.migrate --quiet -r #{repo}",
+      "test"
     ]
   end
 
@@ -43,7 +72,14 @@ defmodule FuzzyRss.MixProject do
       {:phoenix, "~> 1.8.1"},
       {:phoenix_ecto, "~> 4.5"},
       {:ecto_sql, "~> 3.13"},
+
+      # Include ALL database adapters (selected via ENV at runtime)
+      # MySQL/MariaDB
       {:myxql, ">= 0.0.0"},
+      # PostgreSQL
+      {:postgrex, ">= 0.0.0"},
+      # SQLite (default for self-hosting)
+      {:ecto_sqlite3, ">= 0.0.0"},
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 1.1.0"},
@@ -65,7 +101,24 @@ defmodule FuzzyRss.MixProject do
       {:gettext, "~> 0.26"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
-      {:bandit, "~> 1.5"}
+      {:bandit, "~> 1.5"},
+
+      # Authentication
+      # Password hashing
+      {:bcrypt_elixir, "~> 3.0"},
+      # OAuth/OIDC authentication
+      {:ueberauth, "~> 0.10"},
+      {:ueberauth_oidcc, "~> 0.4"}
+
+      # RSS & Feed Processing (commented out for now - will add in Phase 4)
+      # {:feeder_ex, "~> 1.1"},          # RSS/Atom parsing
+      # {:oban, "~> 2.18"},              # Background jobs
+      # {:floki, "~> 0.36"},             # HTML parsing
+      # {:readability, "~> 0.12"},       # Article extraction
+      # {:saxy, "~> 1.5"},               # OPML/XML parsing
+      # {:joken, "~> 2.6"},              # JWT for API
+      # {:timex, "~> 3.7"},              # Date/time handling
+      # {:slugify, "~> 1.3"}             # URL-friendly slugs
     ]
   end
 
@@ -80,7 +133,8 @@ defmodule FuzzyRss.MixProject do
       setup: ["deps.get", "ecto.setup", "assets.setup", "assets.build"],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
-      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
+      # For testing, only use the repo specified by DATABASE_ADAPTER (defaults to SQLite)
+      test: test_alias(),
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["compile", "tailwind fuzzy_rss", "esbuild fuzzy_rss"],
       "assets.deploy": [

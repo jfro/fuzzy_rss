@@ -1,6 +1,8 @@
 defmodule FuzzyRssWeb.Router do
   use FuzzyRssWeb, :router
 
+  import FuzzyRssWeb.UserAuth
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -8,10 +10,15 @@ defmodule FuzzyRssWeb.Router do
     plug :put_root_layout, html: {FuzzyRssWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :fetch_current_scope_for_user
   end
 
   pipeline :api do
     plug :accepts, ["json"]
+  end
+
+  pipeline :ueberauth do
+    plug Ueberauth
   end
 
   scope "/", FuzzyRssWeb do
@@ -39,6 +46,43 @@ defmodule FuzzyRssWeb.Router do
 
       live_dashboard "/dashboard", metrics: FuzzyRssWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
+    end
+  end
+
+  ## Authentication routes
+
+  scope "/", FuzzyRssWeb do
+    pipe_through [:browser, :redirect_if_user_is_authenticated]
+
+    get "/users/register", UserRegistrationController, :new
+    post "/users/register", UserRegistrationController, :create
+  end
+
+  scope "/", FuzzyRssWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    get "/users/settings", UserSettingsController, :edit
+    put "/users/settings", UserSettingsController, :update
+    get "/users/settings/confirm-email/:token", UserSettingsController, :confirm_email
+  end
+
+  scope "/", FuzzyRssWeb do
+    pipe_through [:browser]
+
+    get "/users/log-in", UserSessionController, :new
+    get "/users/log-in/:token", UserSessionController, :confirm
+    post "/users/log-in", UserSessionController, :create
+    delete "/users/log-out", UserSessionController, :delete
+  end
+
+  # OIDC authentication routes (optional, can be disabled)
+  if Application.compile_env(:fuzzy_rss, [:oidc_enabled], false) do
+    scope "/auth", FuzzyRssWeb do
+      pipe_through [:browser, :ueberauth]
+
+      get "/:provider", AuthController, :request
+      get "/:provider/callback", AuthController, :callback
+      post "/:provider/callback", AuthController, :callback
     end
   end
 end

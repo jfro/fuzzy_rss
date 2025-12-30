@@ -18,12 +18,12 @@ defmodule FuzzyRss.DataCase do
 
   using do
     quote do
-      alias FuzzyRss.Repo
-
       import Ecto
       import Ecto.Changeset
       import Ecto.Query
       import FuzzyRss.DataCase
+
+      defp repo, do: Application.fetch_env!(:fuzzy_rss, :repo_module)
     end
   end
 
@@ -36,7 +36,8 @@ defmodule FuzzyRss.DataCase do
   Sets up the sandbox based on the test tags.
   """
   def setup_sandbox(tags) do
-    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(FuzzyRss.Repo, shared: not tags[:async])
+    repo = Application.fetch_env!(:fuzzy_rss, :repo_module)
+    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(repo, shared: not tags[:async])
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
   end
 

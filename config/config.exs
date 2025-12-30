@@ -7,8 +7,30 @@
 # General application configuration
 import Config
 
+config :fuzzy_rss, :scopes,
+  user: [
+    default: true,
+    module: FuzzyRss.Accounts.Scope,
+    assign_key: :current_scope,
+    access_path: [:user, :id],
+    schema_key: :user_id,
+    schema_type: :id,
+    schema_table: :users,
+    test_data_fixture: FuzzyRss.AccountsFixtures,
+    test_setup_helper: :register_and_log_in_user
+  ]
+
+# Determine which repo to use based on DATABASE_ADAPTER env var
+ecto_repos =
+  case System.get_env("DATABASE_ADAPTER", "sqlite") |> String.to_atom() do
+    :sqlite -> [FuzzyRss.RepoSQLite]
+    :mysql -> [FuzzyRss.RepoMySQL]
+    :postgresql -> [FuzzyRss.RepoPostgres]
+    _ -> [FuzzyRss.RepoSQLite]
+  end
+
 config :fuzzy_rss,
-  ecto_repos: [FuzzyRss.Repo],
+  ecto_repos: ecto_repos,
   generators: [timestamp_type: :utc_datetime]
 
 # Configures the endpoint
@@ -59,6 +81,21 @@ config :logger, :default_formatter,
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+
+# Ueberauth configuration
+config :ueberauth, Ueberauth,
+  providers: [
+    oidc: {Ueberauth.Strategy.OIDC, []}
+  ]
+
+# Ueberauth OIDC strategy configuration (can be overridden per environment)
+config :ueberauth, Ueberauth.Strategy.OIDC,
+  client_id: System.get_env("OIDC_CLIENT_ID"),
+  client_secret: System.get_env("OIDC_CLIENT_SECRET"),
+  discovery_document_uri: System.get_env("OIDC_DISCOVERY_URL")
+
+# Enable OIDC (optional, can be disabled)
+config :fuzzy_rss, :oidc_enabled, System.get_env("OIDC_ENABLED", "false") == "true"
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
