@@ -245,7 +245,7 @@ create table(:user_identities) do
   add :provider_uid, :string, null: false  # User ID from provider
   add :email, :string  # Email from provider
   add :name, :string  # Name from provider
-  add :avatar_url, :string  # Profile picture
+  add :avatar, :binary  # Avatar image stored as blob (avoids provider throttling)
   add :raw_data, :map  # Store full provider response
 
   timestamps()
@@ -304,7 +304,7 @@ defmodule FuzzyRss.Accounts.UserIdentity do
     field :provider_uid, :string
     field :email, :string
     field :name, :string
-    field :avatar_url, :string
+    field :avatar, :binary  # Avatar image blob
     field :raw_data, :map
 
     belongs_to :user, FuzzyRss.Accounts.User
@@ -314,7 +314,7 @@ defmodule FuzzyRss.Accounts.UserIdentity do
 
   def changeset(identity, attrs) do
     identity
-    |> cast(attrs, [:provider, :provider_uid, :email, :name, :avatar_url, :raw_data])
+    |> cast(attrs, [:provider, :provider_uid, :email, :name, :avatar, :raw_data])
     |> validate_required([:provider, :provider_uid])
     |> unique_constraint([:provider, :provider_uid])
   end
@@ -340,13 +340,22 @@ defmodule FuzzyRss.Accounts.OIDC do
     provider_uid = ueberauth_info.uid
     email = ueberauth_info.info.email
     name = ueberauth_info.info.name
+    avatar_url = ueberauth_info.info.image
+
+    # Download and store avatar as blob to avoid provider throttling
+    avatar_blob =
+      if avatar_url do
+        download_avatar_blob(avatar_url)
+      else
+        nil
+      end
 
     identity_attrs = %{
       provider: to_string(provider),
       provider_uid: to_string(provider_uid),
       email: email,
       name: name,
-      avatar_url: ueberauth_info.info.image,
+      avatar: avatar_blob,
       raw_data: Map.from_struct(ueberauth_info)
     }
 
@@ -359,6 +368,18 @@ defmodule FuzzyRss.Accounts.OIDC do
         # Return existing user
         {:ok, Repo.preload(identity, :user).user}
     end
+  end
+
+  defp download_avatar_blob(url) do
+    case Req.get(url) do
+      {:ok, response} ->
+        response.body
+
+      {:error, _reason} ->
+        nil
+    end
+  rescue
+    _ -> nil
   end
 
   defp create_user_with_identity(email, identity_attrs) do
