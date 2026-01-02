@@ -37,7 +37,8 @@ defmodule FuzzyRss.Content.Feed do
       :last_successful_fetch_at,
       :last_error,
       :etag,
-      :last_modified
+      :last_modified,
+      :favicon_url
     ])
     |> validate_required([:url])
     |> unique_constraint(:url)

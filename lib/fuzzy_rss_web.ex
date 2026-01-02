@@ -84,6 +84,8 @@ defmodule FuzzyRssWeb do
 
       # HTML escaping functionality
       import Phoenix.HTML
+      # HTML utilities
+      import FuzzyRss.Html
       # Core UI components
       import FuzzyRssWeb.CoreComponents
 

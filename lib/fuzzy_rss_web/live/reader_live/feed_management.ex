@@ -80,19 +80,28 @@ defmodule FuzzyRssWeb.ReaderLive.FeedManagement do
           <div class="card bg-base-100 shadow">
             <div class="card-body">
               <div class="flex justify-between items-start">
-                <div class="flex-1">
-                  <h2 class="card-title">{feed.title || feed.url}</h2>
-                  <p class="text-sm text-base-content/60">{feed.url}</p>
-                  <p class="text-xs text-base-content/40 mt-2">
-                    <%= if feed.last_fetched_at do %>
-                      Last fetched: {Calendar.strftime(feed.last_fetched_at, "%Y-%m-%d %H:%M:%S")}
-                    <% else %>
-                      Never fetched
-                    <% end %>
-                  </p>
-                  <%= if feed.last_error do %>
-                    <p class="text-xs text-error mt-1">Error: {feed.last_error}</p>
+                <div class="flex items-start gap-3 flex-1">
+                  <%= if feed.favicon_url do %>
+                    <img src={feed.favicon_url} class="size-8 rounded-md mt-1" />
+                  <% else %>
+                    <div class="size-8 bg-base-300 rounded-md flex items-center justify-center mt-1">
+                      <.icon name="hero-rss" class="size-5 opacity-40" />
+                    </div>
                   <% end %>
+                  <div class="flex-1 min-w-0">
+                    <h2 class="card-title truncate">{feed.title || feed.url}</h2>
+                    <p class="text-sm text-base-content/60 truncate">{feed.url}</p>
+                    <p class="text-xs text-base-content/40 mt-2">
+                      <%= if feed.last_fetched_at do %>
+                        Last fetched: {Calendar.strftime(feed.last_fetched_at, "%Y-%m-%d %H:%M:%S")}
+                      <% else %>
+                        Never fetched
+                      <% end %>
+                    </p>
+                    <%= if feed.last_error do %>
+                      <p class="text-xs text-error mt-1">Error: {feed.last_error}</p>
+                    <% end %>
+                  </div>
                 </div>
                 <div class="flex gap-2">
                   <button

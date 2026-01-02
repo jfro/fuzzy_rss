@@ -4,7 +4,7 @@ defmodule FuzzyRss.Workers.FeedFetcherWorker do
   import Ecto.Query
   alias FuzzyRss.Content
   alias FuzzyRss.Content.Entry
-  alias FuzzyRss.Feeds.{Fetcher, Parser}
+  alias FuzzyRss.Feeds.{Fetcher, Parser, Discoverer}
 
   defp repo, do: Application.fetch_env!(:fuzzy_rss, :repo_module)
 
@@ -57,10 +57,23 @@ defmodule FuzzyRss.Workers.FeedFetcherWorker do
   end
 
   defp update_feed_metadata(feed, feed_data) do
+    favicon_url = feed_data[:favicon_url] || feed.favicon_url
+
+    favicon_url =
+      if is_nil(favicon_url) and feed_data[:site_url] do
+        case Discoverer.find_favicon(feed_data[:site_url]) do
+          {:ok, url} -> url
+          _ -> nil
+        end
+      else
+        favicon_url
+      end
+
     Content.update_feed(feed, %{
       title: feed_data[:title],
       description: feed_data[:description],
       site_url: feed_data[:site_url],
+      favicon_url: favicon_url,
       feed_type: feed_data[:feed_type]
     })
   end

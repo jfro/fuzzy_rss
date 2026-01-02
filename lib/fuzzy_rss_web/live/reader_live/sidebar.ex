@@ -103,7 +103,11 @@ defmodule FuzzyRssWeb.ReaderLive.Sidebar do
           class={"flex items-center transition-colors px-4 py-2 text-xs #{if @is_selected, do: "bg-primary/20", else: "hover:bg-base-300"}"}
           style={"padding-left: #{@feed_indent_px}px"}
         >
-          <.icon name="hero-rss" class="size-3 flex-shrink-0 opacity-60 mr-2" />
+          <%= if @node.data.favicon_url do %>
+            <img src={@node.data.favicon_url} class="size-3 flex-shrink-0 mr-2 rounded-sm" />
+          <% else %>
+            <.icon name="hero-rss" class="size-3 flex-shrink-0 opacity-60 mr-2" />
+          <% end %>
           <span class="flex-1 truncate">{@node.data.title || @node.data.url}</span>
           <%= if @node.unread_count > 0 do %>
             <span class="badge badge-xs badge-primary flex-shrink-0 ml-2">

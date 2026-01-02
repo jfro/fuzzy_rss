@@ -5,51 +5,40 @@
   <%= if @page_mode == :reader do %>
     <!-- Entry List -->
     <div class="flex-1 flex flex-col bg-base-100 min-w-0">
-      <div class="navbar bg-base-200 border-b border-base-300">
-        <div class="flex-1">
-          <h2 class="text-xl font-bold">
+      <div class="flex flex-col bg-base-200 border-b border-base-300 px-4 py-3 gap-3">
+        <div class="flex items-center min-w-0">
+          <h2 class="text-xl font-bold flex items-center gap-2 min-w-0">
             <%= if @selected_feed do %>
-              {(Enum.find(@feeds, &(&1.id == @selected_feed)) || %{title: "Feed"}).title}
+              <% feed =
+                Enum.find(@feeds, &(&1.id == @selected_feed)) ||
+                  %{title: "Feed", favicon_url: nil} %>
+              <%= if feed.favicon_url do %>
+                <img src={feed.favicon_url} class="size-5 rounded-sm shrink-0" />
+              <% end %>
+              <span class="truncate">{feed.title}</span>
             <% else %>
               <%= if @selected_folder do %>
-                {(Enum.find(@folders, &(&1.id == @selected_folder)) || %{name: "Folder"}).name}
+                <span class="truncate">
+                  {(Enum.find(@folders, &(&1.id == @selected_folder)) || %{name: "Folder"}).name}
+                </span>
               <% else %>
                 {if @filter == :starred, do: "⭐ Starred", else: "📰 All Entries"}
               <% end %>
             <% end %>
-            <%= if (@selected_feed || @selected_folder) do %>
-              <span class="text-base-content/50 font-normal">
-                - {if @filter == :unread, do: "Unread", else: "All"}
-              </span>
-            <% end %>
           </h2>
         </div>
-        <div class="flex-none flex gap-2">
+        <div class="flex items-center gap-2">
           <%= if @selected_feed || @selected_folder do %>
             <button
               phx-click="toggle_feed_filter"
-              class="btn btn-sm btn-ghost gap-2"
+              class="btn btn-sm btn-ghost bg-base-300/50 hover:bg-base-300 gap-2"
               title="Toggle between unread and all articles"
             >
               {if @filter == :unread, do: "📖 Unread", else: "📋 All"}
             </button>
           <% end %>
           <button phx-click="mark_all_read" class="btn btn-sm btn-ghost gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-            Mark All Read
+            <.icon name="hero-check" class="h-4 w-4" /> Mark All Read
           </button>
         </div>
       </div>
@@ -75,13 +64,18 @@
                   {entry.title}
                 </h3>
                 <div class="flex gap-2 items-center text-xs text-base-content/60 flex-wrap">
-                  <span class="badge badge-ghost badge-sm">{entry.feed.title}</span>
+                  <span class="badge badge-ghost badge-sm gap-1 max-w-[150px] sm:max-w-[200px]">
+                    <%= if entry.feed.favicon_url do %>
+                      <img src={entry.feed.favicon_url} class="size-3 rounded-sm shrink-0" />
+                    <% end %>
+                    <span class="truncate">{entry.feed.title}</span>
+                  </span>
                   <span>·</span>
                   <span>{Calendar.strftime(entry.published_at, "%b %d, %Y")}</span>
                 </div>
                 <%= if entry.summary do %>
                   <p class={"text-sm line-clamp-2 break-words #{if read, do: "text-base-content/50", else: "text-base-content/80"}"}>
-                    {entry.summary}
+                    {raw(sanitize_summary(entry.summary))}
                   </p>
                 <% end %>
               </div>

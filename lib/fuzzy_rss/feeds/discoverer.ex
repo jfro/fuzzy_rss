@@ -17,6 +17,50 @@ defmodule FuzzyRss.Feeds.Discoverer do
     end
   end
 
+  def find_favicon(site_url) when is_binary(site_url) do
+    case Req.get(site_url, max_redirects: 5, receive_timeout: 10_000) do
+      {:ok, response} ->
+        case Floki.parse_document(response.body) do
+          {:ok, document} ->
+            favicon =
+              document
+              |> Floki.find(
+                "link[rel~='icon'], link[rel~='shortcut icon'], link[rel='apple-touch-icon']"
+              )
+              |> Enum.find_value(fn link ->
+                case Floki.attribute(link, "href") do
+                  [href | _] -> resolve_url(href, site_url)
+                  _ -> nil
+                end
+              end)
+
+            if favicon do
+              {:ok, favicon}
+            else
+              fallback_favicon(site_url)
+            end
+
+          _ ->
+            fallback_favicon(site_url)
+        end
+
+      _ ->
+        fallback_favicon(site_url)
+    end
+  end
+
+  def find_favicon(_), do: {:error, :invalid_url}
+
+  defp fallback_favicon(site_url) do
+    uri = URI.parse(site_url)
+    fallback = "#{uri.scheme}://#{uri.host}/favicon.ico"
+
+    case Req.head(fallback) do
+      {:ok, %{status: status}} when status in 200..299 -> {:ok, fallback}
+      _ -> {:error, :not_found}
+    end
+  end
+
   defp extract_feed_urls(html, base_url) do
     case Floki.parse_document(html) do
       {:ok, document} ->

@@ -72,10 +72,19 @@ defmodule FuzzyRss.Feeds.Parser do
         title: Map.get(feed_data, "title") || "Untitled",
         description: Map.get(feed_data, "description"),
         site_url: Map.get(feed_data, "link"),
+        favicon_url: extract_rss_favicon(feed_data),
         feed_type: "rss"
       },
       entries: Enum.map(items, &normalize_entry/1)
     }
+  end
+
+  defp extract_rss_favicon(feed_data) do
+    # RSS doesn't have a standard favicon field, but sometimes use image/url
+    case Map.get(feed_data, "image") do
+      %{"url" => url} -> url
+      _ -> nil
+    end
   end
 
   defp normalize_entry(item) do
@@ -194,6 +203,10 @@ defmodule FuzzyRss.Feeds.Parser do
     feed_description = extract_text_from_element_list(elements, :subtitle)
     feed_link = extract_link_from_element_list(elements, :alternate)
 
+    feed_icon =
+      extract_text_from_element_list(elements, :icon) ||
+        extract_text_from_element_list(elements, :logo)
+
     # Extract entries
     entries =
       elements
@@ -209,6 +222,7 @@ defmodule FuzzyRss.Feeds.Parser do
         title: feed_title,
         description: feed_description,
         site_url: feed_link,
+        favicon_url: feed_icon,
         feed_type: "atom"
       },
       entries: entries
