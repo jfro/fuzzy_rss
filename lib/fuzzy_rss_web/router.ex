@@ -78,14 +78,15 @@ defmodule FuzzyRssWeb.Router do
       live "/feed/:feed_id", ReaderLive.Index, :feed
       live "/starred", ReaderLive.Index, :starred
 
-      live "/feeds", FeedLive.Index, :index
-      live "/feeds/new", FeedLive.Form, :new
-      live "/feeds/discover", FeedLive.Discover, :discover
+      live "/feeds", ReaderLive.Index, :feeds
+      live "/feeds/new", ReaderLive.Index, :feeds_new
+      live "/feeds/discover", ReaderLive.Index, :feeds_discover
 
-      live "/folders", FolderLive.Index, :index
+      live "/folders", ReaderLive.Index, :folders
 
-      live "/settings", SettingsLive.Index, :index
-      live "/settings/import-export", SettingsLive.ImportExport, :import_export
+      live "/settings", ReaderLive.Index, :settings
+      live "/settings/import-export", ReaderLive.Index, :settings_import_export
+      live "/account-settings", ReaderLive.Index, :account_settings
     end
   end
 

@@ -1,11 +1,16 @@
-defmodule FuzzyRssWeb.FeedLive.Form do
-  use FuzzyRssWeb, :live_view
+defmodule FuzzyRssWeb.ReaderLive.FeedForm do
+  use FuzzyRssWeb, :live_component
 
   alias FuzzyRss.Content
 
   @impl true
-  def mount(_params, _session, socket) do
-    {:ok, assign(socket, :feed_url, "")}
+  def update(assigns, socket) do
+    socket =
+      socket
+      |> assign(:current_user, assigns.current_user)
+      |> assign(:feed_url, "")
+
+    {:ok, socket}
   end
 
   @impl true
@@ -17,7 +22,7 @@ defmodule FuzzyRssWeb.FeedLive.Form do
         {:noreply,
          socket
          |> put_flash(:info, "Subscribed to feed successfully")
-         |> push_navigate(to: ~p"/app/feeds")}
+         |> push_patch(to: ~p"/app/feeds")}
 
       {:error, _changeset} ->
         {:noreply, put_flash(socket, :error, "Failed to subscribe to feed")}
@@ -30,7 +35,7 @@ defmodule FuzzyRssWeb.FeedLive.Form do
     <div class="max-w-2xl mx-auto p-6">
       <h1 class="text-3xl font-bold mb-6">Add Feed</h1>
 
-      <form phx-submit="save" class="space-y-4">
+      <form phx-submit="save" phx-target={@myself} class="space-y-4">
         <div class="form-control">
           <label class="label">
             <span class="label-text">Feed URL</span>
@@ -46,7 +51,7 @@ defmodule FuzzyRssWeb.FeedLive.Form do
 
         <div class="flex gap-2">
           <button type="submit" class="btn btn-primary">Subscribe</button>
-          <.link navigate={~p"/app/feeds"} class="btn btn-ghost">Cancel</.link>
+          <.link patch={~p"/app/feeds"} class="btn btn-ghost">Cancel</.link>
         </div>
       </form>
     </div>

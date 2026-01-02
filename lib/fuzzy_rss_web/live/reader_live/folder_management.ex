@@ -1,14 +1,19 @@
-defmodule FuzzyRssWeb.FolderLive.Index do
-  use FuzzyRssWeb, :live_view
+defmodule FuzzyRssWeb.ReaderLive.FolderManagement do
+  use FuzzyRssWeb, :live_component
 
   alias FuzzyRss.Content
 
   @impl true
-  def mount(_params, _session, socket) do
-    user = socket.assigns.current_user
+  def update(assigns, socket) do
+    user = assigns.current_user
     folders = Content.list_user_folders(user)
 
-    {:ok, assign(socket, :folders, folders)}
+    socket =
+      socket
+      |> assign(:current_user, assigns.current_user)
+      |> assign(:folders, folders)
+
+    {:ok, socket}
   end
 
   @impl true
@@ -33,7 +38,7 @@ defmodule FuzzyRssWeb.FolderLive.Index do
       <% end %>
 
       <div class="mt-8">
-        <.link navigate={~p"/app"} class="btn btn-ghost">← Back to Reader</.link>
+        <.link patch={~p"/app"} class="btn btn-ghost">← Back to Reader</.link>
       </div>
     </div>
     """

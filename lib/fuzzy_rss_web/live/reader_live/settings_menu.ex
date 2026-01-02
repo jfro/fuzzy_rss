@@ -1,8 +1,9 @@
-defmodule FuzzyRssWeb.SettingsLive.Index do
-  use FuzzyRssWeb, :live_view
+defmodule FuzzyRssWeb.ReaderLive.SettingsMenu do
+  use FuzzyRssWeb, :live_component
 
   @impl true
-  def mount(_params, _session, socket) do
+  def update(assigns, socket) do
+    socket = assign(socket, :current_user, assigns.current_user)
     {:ok, socket}
   end
 
@@ -14,7 +15,7 @@ defmodule FuzzyRssWeb.SettingsLive.Index do
 
       <div class="grid gap-4">
         <.link
-          navigate={~p"/app/settings/import-export"}
+          patch={~p"/app/settings/import-export"}
           class="card bg-base-100 shadow hover:shadow-lg transition-shadow"
         >
           <div class="card-body">
@@ -24,7 +25,7 @@ defmodule FuzzyRssWeb.SettingsLive.Index do
         </.link>
 
         <.link
-          navigate={~p"/app/feeds"}
+          patch={~p"/app/feeds"}
           class="card bg-base-100 shadow hover:shadow-lg transition-shadow"
         >
           <div class="card-body">
@@ -34,7 +35,7 @@ defmodule FuzzyRssWeb.SettingsLive.Index do
         </.link>
 
         <.link
-          navigate={~p"/app/folders"}
+          patch={~p"/app/folders"}
           class="card bg-base-100 shadow hover:shadow-lg transition-shadow"
         >
           <div class="card-body">
@@ -44,7 +45,7 @@ defmodule FuzzyRssWeb.SettingsLive.Index do
         </.link>
 
         <.link
-          navigate={~p"/users/settings"}
+          patch={~p"/app/account-settings"}
           class="card bg-base-100 shadow hover:shadow-lg transition-shadow"
         >
           <div class="card-body">
@@ -55,7 +56,7 @@ defmodule FuzzyRssWeb.SettingsLive.Index do
       </div>
 
       <div class="mt-8">
-        <.link navigate={~p"/app"} class="btn btn-ghost">
+        <.link patch={~p"/app"} class="btn btn-ghost">
           ← Back to Reader
         </.link>
       </div>

@@ -17,10 +17,11 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
       |> assign(:entries, [])
       |> assign(:selected_entry, nil)
       |> assign(:view_mode, :list)
-      |> assign(:show_feed_modal, false)
-      |> assign(:show_add_feed_modal, false)
+      |> assign(:page_mode, :reader)
       |> assign(:sidebar_tree, [])
       |> assign(:expanded_folders, MapSet.new())
+      |> allow_upload(:opml_file, accept: ~w(.xml), max_entries: 1)
+      |> allow_upload(:starred_file, accept: ~w(.json), max_entries: 1)
       |> load_sidebar_data()
       |> load_entries()
 
@@ -30,27 +31,35 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
   @impl true
   def handle_params(params, _url, socket) do
     socket =
-      case params do
-        %{"feed_id" => feed_id} ->
-          socket
-          |> assign(:selected_feed, String.to_integer(feed_id))
-          |> assign(:filter, :all)
-          |> load_entries()
-
-        %{"folder_id" => folder_id} ->
-          socket
-          |> assign(:selected_folder, String.to_integer(folder_id))
-          |> load_entries()
+      case socket.assigns.live_action do
+        action when action in [:feeds, :feeds_new, :feeds_discover, :folders, :settings, :settings_import_export, :account_settings] ->
+          assign(socket, :page_mode, :management)
 
         _ ->
-          case socket.assigns.live_action do
-            :starred ->
+          socket = assign(socket, :page_mode, :reader)
+
+          case params do
+            %{"feed_id" => feed_id} ->
               socket
-              |> assign(:filter, :starred)
+              |> assign(:selected_feed, String.to_integer(feed_id))
+              |> assign(:filter, :all)
+              |> load_entries()
+
+            %{"folder_id" => folder_id} ->
+              socket
+              |> assign(:selected_folder, String.to_integer(folder_id))
               |> load_entries()
 
             _ ->
-              socket
+              case socket.assigns.live_action do
+                :starred ->
+                  socket
+                  |> assign(:filter, :starred)
+                  |> load_entries()
+
+                _ ->
+                  socket
+              end
           end
       end
 
@@ -155,16 +164,6 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
   end
 
   @impl true
-  def handle_event("toggle_feed_modal", _params, socket) do
-    {:noreply, assign(socket, :show_feed_modal, !socket.assigns.show_feed_modal)}
-  end
-
-  @impl true
-  def handle_event("toggle_add_feed_modal", _params, socket) do
-    {:noreply, assign(socket, :show_add_feed_modal, !socket.assigns.show_add_feed_modal)}
-  end
-
-  @impl true
   def handle_event("toggle_folder", %{"folder_id" => folder_id}, socket) do
     folder_id = String.to_integer(folder_id)
     expanded = socket.assigns.expanded_folders
@@ -201,24 +200,6 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
   def handle_event("refresh_feed", %{"feed_id" => feed_id}, socket) do
     Content.refresh_feed(String.to_integer(feed_id))
     {:noreply, load_sidebar_data(socket)}
-  end
-
-  @impl true
-  def handle_event("add_feed", %{"feed_url" => feed_url}, socket) do
-    case Content.subscribe_to_feed(socket.assigns.current_user, feed_url) do
-      {:ok, _feed} ->
-        socket
-        |> put_flash(:info, "Feed added successfully!")
-        |> assign(:show_add_feed_modal, false)
-        |> load_sidebar_data()
-        |> load_entries()
-        |> then(&{:noreply, &1})
-
-      {:error, reason} ->
-        socket
-        |> put_flash(:error, "Failed to add feed: #{reason}")
-        |> then(&{:noreply, &1})
-    end
   end
 
   @impl true
@@ -264,8 +245,18 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
   end
 
   @impl true
-  def handle_info({:toggle_feed_modal, _}, socket) do
-    {:noreply, assign(socket, :show_feed_modal, !socket.assigns.show_feed_modal)}
+  def handle_info({:import_completed, :opml}, socket) do
+    socket
+    |> load_sidebar_data()
+    |> load_entries()
+    |> then(&{:noreply, &1})
+  end
+
+  @impl true
+  def handle_info({:import_completed, :starred}, socket) do
+    socket
+    |> load_entries()
+    |> then(&{:noreply, &1})
   end
 
   defp is_read?(entry) do

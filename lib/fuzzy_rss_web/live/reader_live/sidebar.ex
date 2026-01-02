@@ -1,11 +1,6 @@
 defmodule FuzzyRssWeb.ReaderLive.Sidebar do
   use FuzzyRssWeb, :live_component
 
-  def handle_event("toggle_feed_modal", _params, socket) do
-    send(socket.root_pid, {:toggle_feed_modal, {}})
-    {:noreply, socket}
-  end
-
   defp render_tree_node(node, expanded_folders, level) do
     indent_px = min(level, 5) * 16
 
@@ -36,7 +31,7 @@ defmodule FuzzyRssWeb.ReaderLive.Sidebar do
             <.icon name="hero-folder" class="size-4 flex-shrink-0 opacity-60" />
 
             <.link
-              navigate={~p"/app/folder/#{@node.id}"}
+              patch={~p"/app/folder/#{@node.id}"}
               class="flex-1 flex items-center justify-between py-2 text-xs min-w-0"
             >
               <span class="truncate">{@node.data.name}</span>
@@ -63,7 +58,7 @@ defmodule FuzzyRssWeb.ReaderLive.Sidebar do
 
         ~H"""
         <.link
-          navigate={~p"/app/feed/#{@node.id}"}
+          patch={~p"/app/feed/#{@node.id}"}
           class="flex items-center hover:bg-base-300 transition-colors px-4 py-2 text-xs"
           style={"padding-left: #{@feed_indent_px}px"}
         >
@@ -95,7 +90,7 @@ defmodule FuzzyRssWeb.ReaderLive.Sidebar do
             <span>Views</span>
           </li>
           <li>
-            <.link navigate={~p"/app"} class="gap-2">
+            <.link patch={~p"/app"} class="gap-2">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 class="h-4 w-4 flex-shrink-0"
@@ -114,7 +109,7 @@ defmodule FuzzyRssWeb.ReaderLive.Sidebar do
             </.link>
           </li>
           <li>
-            <.link navigate={~p"/app/starred"} class="gap-2">
+            <.link patch={~p"/app/starred"} class="gap-2">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 class="h-4 w-4 flex-shrink-0"
@@ -139,20 +134,20 @@ defmodule FuzzyRssWeb.ReaderLive.Sidebar do
         <div class="px-4 py-2 flex items-center justify-between">
           <span class="font-semibold text-sm text-base-content/70">Feeds & Folders</span>
           <div class="flex gap-1">
-            <button
-              phx-click="toggle_feed_modal"
+            <.link
+              patch={~p"/app/feeds"}
               class="btn btn-xs btn-circle btn-ghost"
               title="Manage feeds"
             >
               <.icon name="hero-cog-6-tooth" class="size-3" />
-            </button>
-            <button
-              phx-click="toggle_add_feed_modal"
+            </.link>
+            <.link
+              patch={~p"/app/feeds/new"}
               class="btn btn-xs btn-circle btn-ghost"
               title="Add feed"
             >
               <.icon name="hero-plus" class="size-3" />
-            </button>
+            </.link>
           </div>
         </div>
 
@@ -170,7 +165,7 @@ defmodule FuzzyRssWeb.ReaderLive.Sidebar do
       <div class="border-t border-base-300">
         <ul class="menu menu-compact p-2">
           <li>
-            <.link navigate={~p"/app/settings"} class="gap-2">
+            <.link patch={~p"/app/settings"} class="gap-2">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 class="h-4 w-4"

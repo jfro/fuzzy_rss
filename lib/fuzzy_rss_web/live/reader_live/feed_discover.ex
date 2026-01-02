@@ -1,10 +1,13 @@
-defmodule FuzzyRssWeb.FeedLive.Discover do
-  use FuzzyRssWeb, :live_view
+defmodule FuzzyRssWeb.ReaderLive.FeedDiscover do
+  use FuzzyRssWeb, :live_component
 
-  def mount(_params, _session, socket) do
+  @impl true
+  def update(assigns, socket) do
+    socket = assign(socket, :current_user, assigns.current_user)
     {:ok, socket}
   end
 
+  @impl true
   def render(assigns) do
     ~H"""
     <div class="max-w-2xl mx-auto p-6">
@@ -12,7 +15,7 @@ defmodule FuzzyRssWeb.FeedLive.Discover do
       <p class="text-base-content/60">Feed discovery coming soon...</p>
 
       <div class="mt-8">
-        <.link navigate={~p"/app/feeds"} class="btn btn-ghost">← Back to Feeds</.link>
+        <.link patch={~p"/app/feeds"} class="btn btn-ghost">← Back to Feeds</.link>
       </div>
     </div>
     """
