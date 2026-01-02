@@ -12,15 +12,20 @@
               {(Enum.find(@feeds, &(&1.id == @selected_feed)) || %{title: "Feed"}).title}
             <% else %>
               <%= if @selected_folder do %>
-                {(Enum.find(@folders, &(&1.id == @selected_folder)) || %{name: "Folder"}).name} - All Entries
+                {(Enum.find(@folders, &(&1.id == @selected_folder)) || %{name: "Folder"}).name}
               <% else %>
                 {if @filter == :starred, do: "⭐ Starred", else: "📰 All Entries"}
               <% end %>
             <% end %>
+            <%= if (@selected_feed || @selected_folder) do %>
+              <span class="text-base-content/50 font-normal">
+                - {if @filter == :unread, do: "Unread", else: "All"}
+              </span>
+            <% end %>
           </h2>
         </div>
         <div class="flex-none flex gap-2">
-          <%= if @selected_feed do %>
+          <%= if @selected_feed || @selected_folder do %>
             <button
               phx-click="toggle_feed_filter"
               class="btn btn-sm btn-ghost gap-2"

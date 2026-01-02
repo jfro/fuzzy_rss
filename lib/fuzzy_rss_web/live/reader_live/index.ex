@@ -62,13 +62,14 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
               socket
               |> assign(:selected_feed, String.to_integer(feed_id))
               |> assign(:selected_folder, nil)
-              |> assign(:filter, :all)
+              |> assign(:filter, :unread)
               |> load_entries()
 
             %{"folder_id" => folder_id} ->
               socket
               |> assign(:selected_folder, String.to_integer(folder_id))
               |> assign(:selected_feed, nil)
+              |> assign(:filter, :unread)
               |> load_entries()
 
             _ ->
@@ -142,8 +143,8 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
 
   @impl true
   def handle_event("toggle_feed_filter", _params, socket) do
-    # Only allow toggling when viewing a specific feed
-    if socket.assigns.selected_feed do
+    # Only allow toggling when viewing a specific feed or folder
+    if socket.assigns.selected_feed || socket.assigns.selected_folder do
       new_filter = if socket.assigns.filter == :unread, do: :all, else: :unread
 
       socket
