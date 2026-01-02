@@ -6,6 +6,79 @@ defmodule FuzzyRssWeb.ReaderLive.Sidebar do
     {:noreply, socket}
   end
 
+  defp render_tree_node(node, expanded_folders, level) do
+    indent_px = min(level, 5) * 16
+
+    case node.type do
+      :folder ->
+        is_expanded = MapSet.member?(expanded_folders, node.id)
+
+        assigns = %{
+          node: node,
+          is_expanded: is_expanded,
+          indent_px: indent_px,
+          level: level,
+          expanded_folders: expanded_folders
+        }
+
+        ~H"""
+        <div>
+          <div class="flex items-center hover:bg-base-300 transition-colors pr-4" style={"padding-left: #{@indent_px}px"}>
+            <button
+              phx-click="toggle_folder"
+              phx-value-folder_id={@node.id}
+              class="btn btn-xs btn-ghost btn-square flex-shrink-0 p-0"
+              title={if @is_expanded, do: "Collapse", else: "Expand"}
+            >
+              <.icon name={if @is_expanded, do: "hero-chevron-down", else: "hero-chevron-right"} class="size-3" />
+            </button>
+
+            <.icon name="hero-folder" class="size-4 flex-shrink-0 opacity-60" />
+
+            <.link
+              navigate={~p"/app/folder/#{@node.id}"}
+              class="flex-1 flex items-center justify-between py-2 text-xs min-w-0"
+            >
+              <span class="truncate">{@node.data.name}</span>
+              <%= if @node.unread_count > 0 do %>
+                <span class="badge badge-xs badge-primary flex-shrink-0 ml-2">
+                  {@node.unread_count}
+                </span>
+              <% end %>
+            </.link>
+          </div>
+
+          <%= if @is_expanded and length(@node.children) > 0 do %>
+            <%= for child <- @node.children do %>
+              <%= render_tree_node(child, @expanded_folders, @level + 1) %>
+            <% end %>
+          <% end %>
+        </div>
+        """
+
+      :feed ->
+        feed_indent_px = indent_px + 32
+
+        assigns = %{node: node, feed_indent_px: feed_indent_px}
+
+        ~H"""
+        <.link
+          navigate={~p"/app/feed/#{@node.id}"}
+          class="flex items-center hover:bg-base-300 transition-colors px-4 py-2 text-xs"
+          style={"padding-left: #{@feed_indent_px}px"}
+        >
+          <.icon name="hero-rss" class="size-3 flex-shrink-0 opacity-60 mr-2" />
+          <span class="flex-1 truncate">{@node.data.title || @node.data.url}</span>
+          <%= if @node.unread_count > 0 do %>
+            <span class="badge badge-xs badge-primary flex-shrink-0 ml-2">
+              {@node.unread_count}
+            </span>
+          <% end %>
+        </.link>
+        """
+    end
+  end
+
   def render(assigns) do
     ~H"""
     <aside class="w-64 flex-shrink-0 bg-base-200 overflow-y-auto flex flex-col border-r border-base-300">
@@ -64,33 +137,7 @@ defmodule FuzzyRssWeb.ReaderLive.Sidebar do
         <div class="divider my-0"></div>
 
         <div class="px-4 py-2 flex items-center justify-between">
-          <span class="font-semibold text-sm text-base-content/70">Folders</span>
-        </div>
-
-        <div class="space-y-0">
-          <%= if Enum.empty?(@folders) do %>
-            <div class="px-4 py-2 text-xs opacity-50">No folders</div>
-          <% else %>
-            <%= for folder <- @folders do %>
-              <.link
-                navigate={~p"/app/folder/#{folder.id}"}
-                class="flex items-center justify-between px-4 py-2 text-xs hover:bg-base-300 transition-colors block w-full"
-              >
-                <span class="flex-1 truncate">{folder.name}</span>
-                <%= if Map.get(@unread_counts, folder.id, 0) > 0 do %>
-                  <span class="badge badge-xs badge-primary flex-shrink-0 ml-2">
-                    {Map.get(@unread_counts, folder.id, 0)}
-                  </span>
-                <% end %>
-              </.link>
-            <% end %>
-          <% end %>
-        </div>
-
-        <div class="divider my-0"></div>
-
-        <div class="px-4 py-2 flex items-center justify-between">
-          <span class="font-semibold text-sm text-base-content/70">Feeds</span>
+          <span class="font-semibold text-sm text-base-content/70">Feeds & Folders</span>
           <div class="flex gap-1">
             <button
               phx-click="toggle_feed_modal"
@@ -109,22 +156,12 @@ defmodule FuzzyRssWeb.ReaderLive.Sidebar do
           </div>
         </div>
 
-        <div class="space-y-0">
-          <%= if Enum.empty?(@feeds) do %>
+        <div id="sidebar-tree" phx-hook="FolderTree" data-user-id={@current_user.id} class="space-y-0">
+          <%= if Enum.empty?(@sidebar_tree) do %>
             <div class="px-4 py-2 text-xs opacity-50">No feeds yet</div>
           <% else %>
-            <%= for feed <- @feeds do %>
-              <.link
-                navigate={~p"/app/feed/#{feed.id}"}
-                class="flex items-center justify-between px-4 py-2 text-xs hover:bg-base-300 transition-colors block w-full"
-              >
-                <span class="flex-1 truncate">{feed.title || feed.url}</span>
-                <%= if Map.get(@unread_counts, feed.id, 0) > 0 do %>
-                  <span class="badge badge-xs badge-primary flex-shrink-0 ml-2">
-                    {Map.get(@unread_counts, feed.id, 0)}
-                  </span>
-                <% end %>
-              </.link>
+            <%= for node <- @sidebar_tree do %>
+              <%= render_tree_node(node, @expanded_folders, 0) %>
             <% end %>
           <% end %>
         </div>

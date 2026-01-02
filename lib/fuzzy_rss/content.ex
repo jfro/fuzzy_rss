@@ -260,6 +260,145 @@ defmodule FuzzyRss.Content do
   end
 
   @doc """
+  Builds a hierarchical tree of folders and feeds for the sidebar.
+  Returns a list of root-level tree nodes (folders and uncategorized feeds).
+
+  Each tree node has the structure:
+  %{
+    type: :folder | :feed,
+    id: integer,
+    data: %Folder{} | %Feed{},
+    subscription: %Subscription{} | nil,  # Only for feeds
+    unread_count: integer,
+    children: [tree_node],  # Only for folders, empty for feeds
+    level: integer
+  }
+  """
+  def build_sidebar_tree(user) do
+    # Fetch all folders with children and subscriptions preloaded
+    all_folders =
+      from(f in Folder,
+        where: f.user_id == ^user.id,
+        preload: [:children, :subscriptions],
+        order_by: [asc: f.position, asc: f.name]
+      )
+      |> repo().all()
+
+    # Fetch all subscriptions with feeds preloaded
+    all_subscriptions =
+      from(s in Subscription,
+        where: s.user_id == ^user.id,
+        preload: :feed,
+        order_by: [asc: s.position]
+      )
+      |> repo().all()
+
+    # Get unread counts
+    unread_counts = get_unread_counts(user)
+
+    # Build maps for quick lookup
+    folders_by_id = Enum.into(all_folders, %{}, &{&1.id, &1})
+    subscriptions_by_folder_id =
+      Enum.group_by(all_subscriptions, & &1.folder_id)
+
+    # Build tree starting from root-level folders
+    root_folders =
+      all_folders
+      |> Enum.filter(&is_nil(&1.parent_id))
+      |> Enum.map(&build_tree_node(&1, :folder, folders_by_id, subscriptions_by_folder_id, unread_counts, 0))
+
+    # Add root-level feeds (feeds not assigned to any folder)
+    root_feeds =
+      subscriptions_by_folder_id
+      |> Map.get(nil, [])
+      |> Enum.map(&build_tree_node(&1.feed, :feed, folders_by_id, subscriptions_by_folder_id, unread_counts, 0, &1))
+
+    # Combine and sort
+    (root_folders ++ root_feeds)
+    |> Enum.sort_by(fn node ->
+      case node do
+        %{type: :folder, data: folder} -> {0, folder.position, folder.name}
+        %{type: :feed, data: feed} -> {1, feed.title || feed.url}
+      end
+    end)
+  end
+
+  # Builds a single tree node for a folder
+  defp build_tree_node(folder, :folder, folders_by_id, subscriptions_by_folder_id, unread_counts, level) do
+    # Get child folders (already preloaded)
+    child_folders =
+      (folder.children || [])
+      |> Enum.map(&build_tree_node(&1, :folder, folders_by_id, subscriptions_by_folder_id, unread_counts, level + 1))
+
+    # Get feeds in this folder
+    child_feeds =
+      (subscriptions_by_folder_id[folder.id] || [])
+      |> Enum.map(&build_tree_node(&1.feed, :feed, folders_by_id, subscriptions_by_folder_id, unread_counts, level + 1, &1))
+
+    children = child_folders ++ child_feeds
+
+    # Calculate folder unread count (aggregate from children)
+    folder_unread_count =
+      calculate_folder_unread_count(
+        folder.id,
+        subscriptions_by_folder_id,
+        folders_by_id,
+        unread_counts
+      )
+
+    %{
+      type: :folder,
+      id: folder.id,
+      data: folder,
+      subscription: nil,
+      unread_count: folder_unread_count,
+      children: children,
+      level: level
+    }
+  end
+
+  # Builds a single tree node for a feed
+  defp build_tree_node(feed, :feed, _folders_by_id, _subscriptions_by_folder_id, unread_counts, level, subscription) do
+    %{
+      type: :feed,
+      id: feed.id,
+      data: feed,
+      subscription: subscription,
+      unread_count: Map.get(unread_counts, feed.id, 0),
+      children: [],
+      level: level
+    }
+  end
+
+  # Calculates the total unread count for a folder and all its descendants
+  defp calculate_folder_unread_count(folder_id, subscriptions_by_folder_id, folders_by_id, unread_counts) do
+    # Get direct feed subscriptions in this folder
+    direct_feeds_unread =
+      subscriptions_by_folder_id
+      |> Map.get(folder_id, [])
+      |> Enum.reduce(0, fn sub, acc ->
+        acc + Map.get(unread_counts, sub.feed_id, 0)
+      end)
+
+    # Get unread counts from child folders recursively
+    folder = folders_by_id[folder_id]
+    child_folders = folder.children || []
+
+    child_folders_unread =
+      Enum.reduce(child_folders, 0, fn child_folder, acc ->
+        acc +
+          calculate_folder_unread_count(
+            child_folder.id,
+            subscriptions_by_folder_id,
+            folders_by_id,
+            unread_counts
+          )
+      end)
+
+    direct_feeds_unread + child_folders_unread
+  end
+
+  @doc """
   Creates a new folder for a user.
   """
   def create_folder(user, attrs) do

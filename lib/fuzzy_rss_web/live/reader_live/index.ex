@@ -19,6 +19,8 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
       |> assign(:view_mode, :list)
       |> assign(:show_feed_modal, false)
       |> assign(:show_add_feed_modal, false)
+      |> assign(:sidebar_tree, [])
+      |> assign(:expanded_folders, MapSet.new())
       |> load_sidebar_data()
       |> load_entries()
 
@@ -163,6 +165,39 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
   end
 
   @impl true
+  def handle_event("toggle_folder", %{"folder_id" => folder_id}, socket) do
+    folder_id = String.to_integer(folder_id)
+    expanded = socket.assigns.expanded_folders
+
+    new_expanded =
+      if MapSet.member?(expanded, folder_id) do
+        MapSet.delete(expanded, folder_id)
+      else
+        MapSet.put(expanded, folder_id)
+      end
+
+    {:noreply,
+      socket
+      |> assign(:expanded_folders, new_expanded)
+      |> push_event("expanded-folders-changed", %{folder_ids: MapSet.to_list(new_expanded)})}
+  end
+
+  @impl true
+  def handle_event("init_expanded_folders", %{"folder_ids" => ids}, socket) do
+    expanded =
+      ids
+      |> Enum.map(fn id ->
+        case id do
+          id when is_integer(id) -> id
+          id when is_binary(id) -> String.to_integer(id)
+        end
+      end)
+      |> MapSet.new()
+
+    {:noreply, assign(socket, :expanded_folders, expanded)}
+  end
+
+  @impl true
   def handle_event("refresh_feed", %{"feed_id" => feed_id}, socket) do
     Content.refresh_feed(String.to_integer(feed_id))
     {:noreply, load_sidebar_data(socket)}
@@ -237,14 +272,23 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
     Enum.any?(entry.user_entry_states, & &1.read)
   end
 
+  defp extract_feeds_from_tree(tree_nodes) do
+    Enum.flat_map(tree_nodes, fn node ->
+      case node.type do
+        :feed -> [node.data]
+        :folder -> extract_feeds_from_tree(node.children)
+      end
+    end)
+  end
+
   defp load_sidebar_data(socket) do
     user = socket.assigns.current_user
-    folders = Content.list_user_folders(user)
-    feeds = Content.list_user_feeds(user)
+    sidebar_tree = Content.build_sidebar_tree(user)
     unread_counts = Content.get_unread_counts(user)
+    feeds = extract_feeds_from_tree(sidebar_tree)
 
     socket
-    |> assign(:folders, folders)
+    |> assign(:sidebar_tree, sidebar_tree)
     |> assign(:feeds, feeds)
     |> assign(:unread_counts, unread_counts)
   end
