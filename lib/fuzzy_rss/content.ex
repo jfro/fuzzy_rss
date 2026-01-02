@@ -4,7 +4,7 @@ defmodule FuzzyRss.Content do
   """
 
   import Ecto.Query, warn: false
-  alias FuzzyRss.Content.{Feed, Folder, Subscription, Entry, UserEntryState}
+  alias FuzzyRss.Content.{Feed, Folder, Subscription, Entry, UserEntryState, StarredEntry}
 
   defp repo, do: Application.fetch_env!(:fuzzy_rss, :repo_module)
 
@@ -75,8 +75,10 @@ defmodule FuzzyRss.Content do
           )
 
         if remaining_subs == 0 do
-          # No more subscriptions - delete the feed
-          # Database cascades will handle entries and user_entry_states
+          # No more subscriptions - archive starred entries before deleting the feed
+          archive_starred_entries_from_feed(feed_id)
+
+          # Delete the feed (database cascades will handle entries and user_entry_states)
           feed = repo().get(Feed, feed_id)
 
           if feed do
@@ -91,6 +93,44 @@ defmodule FuzzyRss.Content do
       else
         :not_subscribed
       end
+    end)
+  end
+
+  # Archives all starred entries from a feed before deletion.
+  # This preserves the user's starred content even after the feed is deleted.
+  defp archive_starred_entries_from_feed(feed_id) do
+    # Find all entries in this feed that have been starred by any user
+    # Also get the feed information
+    starred_entries =
+      from(e in Entry,
+        join: ues in UserEntryState,
+        on: ues.entry_id == e.id,
+        join: f in Feed,
+        on: f.id == e.feed_id,
+        where: e.feed_id == ^feed_id and ues.starred == true,
+        select: {ues.user_id, e, ues.starred_at, f.title, f.url}
+      )
+      |> repo().all()
+
+    # Archive each starred entry for its user
+    Enum.each(starred_entries, fn {user_id, entry, starred_at, feed_title, feed_url} ->
+      %StarredEntry{}
+      |> StarredEntry.changeset(%{
+        user_id: user_id,
+        guid: entry.guid,
+        url: entry.url,
+        title: entry.title,
+        author: entry.author,
+        content: entry.content,
+        summary: entry.summary,
+        published_at: entry.published_at,
+        image_url: entry.image_url,
+        categories: entry.categories,
+        feed_title: feed_title,
+        feed_url: feed_url,
+        starred_at: starred_at || DateTime.utc_now()
+      })
+      |> repo().insert(on_conflict: :nothing)
     end)
   end
 
@@ -277,14 +317,53 @@ defmodule FuzzyRss.Content do
     query = apply_folder_filter(query, folder_id)
     query = apply_feed_filter(query, feed_id)
 
-    entries = query
-      |> limit(^limit)
-      |> offset(^offset)
-      |> repo().all()
+    # For starred filter, also include archived starred entries
+    if filter == :starred && is_nil(feed_id) && is_nil(folder_id) do
+      live_entries = query
+        |> repo().all()
+        |> repo().preload([user_entry_states: from(ues in UserEntryState, where: ues.user_id == ^user.id)])
 
-    # Manually load user entry states for the result
-    entries
-    |> repo().preload([user_entry_states: from(ues in UserEntryState, where: ues.user_id == ^user.id)])
+      archived_entries = repo().all(
+        from se in StarredEntry,
+          where: se.user_id == ^user.id,
+          order_by: [desc: se.starred_at]
+      )
+
+      # Convert archived entries to Entry-like format with the original feed info
+      archived_as_entries = Enum.map(archived_entries, fn se ->
+        %Entry{
+          id: -se.id,  # Use negative ID to distinguish from real entries
+          guid: se.guid,
+          url: se.url,
+          title: se.title,
+          author: se.author,
+          content: se.content,
+          summary: se.summary,
+          published_at: se.published_at,
+          image_url: se.image_url,
+          categories: se.categories,
+          feed: %Feed{title: se.feed_title || "Archived", url: se.feed_url},
+          user_entry_states: [],
+          inserted_at: se.inserted_at
+        }
+      end)
+
+      # Combine and sort by published_at, then apply limit/offset
+      combined = (live_entries ++ archived_as_entries)
+        |> Enum.sort_by(&(&1.published_at || DateTime.utc_now()), {:desc, DateTime})
+        |> Enum.slice(offset, limit)
+
+      combined
+    else
+      entries = query
+        |> limit(^limit)
+        |> offset(^offset)
+        |> repo().all()
+
+      # Manually load user entry states for the result
+      entries
+      |> repo().preload([user_entry_states: from(ues in UserEntryState, where: ues.user_id == ^user.id)])
+    end
   end
 
   @doc """
@@ -435,6 +514,39 @@ defmodule FuzzyRss.Content do
   """
   def get_entry_state(user, entry_id) do
     repo().get_by(UserEntryState, user_id: user.id, entry_id: entry_id)
+  end
+
+  @doc """
+  Deletes an archived starred entry.
+  Use this when the entry ID is negative (indicating an archived entry).
+  """
+  def delete_archived_entry(user, archived_entry_id) when archived_entry_id < 0 do
+    # Convert negative ID back to positive for the database lookup
+    real_id = -archived_entry_id
+
+    case repo().get_by(StarredEntry, user_id: user.id, id: real_id) do
+      nil -> {:error, :not_found}
+      entry -> repo().delete(entry)
+    end
+  end
+
+  @doc """
+  Deletes a starred entry.
+  If it's a live entry (positive ID), just unstar it.
+  If it's an archived entry (negative ID), delete it from the archive.
+  """
+  def delete_starred_entry(user, entry_id) when entry_id < 0 do
+    delete_archived_entry(user, entry_id)
+  end
+
+  def delete_starred_entry(user, entry_id) do
+    case get_entry_state(user, entry_id) do
+      nil -> {:error, :not_found}
+      state ->
+        state
+        |> UserEntryState.changeset(%{starred: false, starred_at: nil})
+        |> repo().update()
+    end
   end
 
   ## Private helpers
