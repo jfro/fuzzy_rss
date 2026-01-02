@@ -75,10 +75,12 @@ defmodule FuzzyRssWeb.ReaderLive.AccountSettings do
 
       <div class="text-center mb-6">
         <h1 class="text-3xl font-bold">Account Settings</h1>
-        <p class="text-base-content/60 mt-2">Manage your account email address and password settings</p>
+        <p class="text-base-content/60 mt-2">
+          Manage your account email address and password settings
+        </p>
       </div>
-
-      <!-- Email Update Form -->
+      
+    <!-- Email Update Form -->
       <div class="card bg-base-100 shadow mb-6">
         <div class="card-body">
           <h2 class="card-title text-lg">Change Email</h2>
@@ -98,8 +100,8 @@ defmodule FuzzyRssWeb.ReaderLive.AccountSettings do
       </div>
 
       <div class="divider"></div>
-
-      <!-- Password Update Form -->
+      
+    <!-- Password Update Form -->
       <div class="card bg-base-100 shadow mb-6">
         <div class="card-body">
           <h2 class="card-title text-lg">Change Password</h2>

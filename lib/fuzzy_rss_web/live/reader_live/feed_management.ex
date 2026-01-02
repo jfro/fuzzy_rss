@@ -68,7 +68,9 @@ defmodule FuzzyRssWeb.ReaderLive.FeedManagement do
       <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold">Manage Feeds</h1>
         <div class="flex gap-2">
-          <button phx-click="refresh_all" phx-target={@myself} class="btn btn-secondary">Refresh All</button>
+          <button phx-click="refresh_all" phx-target={@myself} class="btn btn-secondary">
+            Refresh All
+          </button>
           <.link patch={~p"/app/feeds/new"} class="btn btn-primary">Add Feed</.link>
         </div>
       </div>

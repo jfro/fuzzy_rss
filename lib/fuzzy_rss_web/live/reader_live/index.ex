@@ -4,10 +4,20 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
   alias FuzzyRss.Content
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(_params, session, socket) do
     if connected?(socket) do
       Phoenix.PubSub.subscribe(FuzzyRss.PubSub, "user:#{socket.assigns.current_user.id}:feeds")
     end
+
+    expanded_from_session =
+      (session["expanded_folders"] || [])
+      |> Enum.map(fn
+        id when is_integer(id) -> id
+        id when is_binary(id) -> String.to_integer(id)
+        _ -> nil
+      end)
+      |> Enum.reject(&is_nil/1)
+      |> MapSet.new()
 
     socket =
       socket
@@ -19,7 +29,7 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
       |> assign(:view_mode, :list)
       |> assign(:page_mode, :reader)
       |> assign(:sidebar_tree, [])
-      |> assign(:expanded_folders, MapSet.new())
+      |> assign(:expanded_folders, expanded_from_session)
       |> allow_upload(:opml_file, accept: ~w(.xml), max_entries: 1)
       |> allow_upload(:starred_file, accept: ~w(.json), max_entries: 1)
       |> load_sidebar_data()
@@ -32,7 +42,16 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
   def handle_params(params, _url, socket) do
     socket =
       case socket.assigns.live_action do
-        action when action in [:feeds, :feeds_new, :feeds_discover, :folders, :settings, :settings_import_export, :account_settings] ->
+        action
+        when action in [
+               :feeds,
+               :feeds_new,
+               :feeds_discover,
+               :folders,
+               :settings,
+               :settings_import_export,
+               :account_settings
+             ] ->
           assign(socket, :page_mode, :management)
 
         _ ->
@@ -42,15 +61,22 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
             %{"feed_id" => feed_id} ->
               socket
               |> assign(:selected_feed, String.to_integer(feed_id))
+              |> assign(:selected_folder, nil)
               |> assign(:filter, :all)
               |> load_entries()
 
             %{"folder_id" => folder_id} ->
               socket
               |> assign(:selected_folder, String.to_integer(folder_id))
+              |> assign(:selected_feed, nil)
               |> load_entries()
 
             _ ->
+              socket =
+                socket
+                |> assign(:selected_feed, nil)
+                |> assign(:selected_folder, nil)
+
               case socket.assigns.live_action do
                 :starred ->
                   socket
@@ -59,6 +85,8 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
 
                 _ ->
                   socket
+                  |> assign(:filter, :unread)
+                  |> load_entries()
               end
           end
       end
@@ -176,24 +204,9 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
       end
 
     {:noreply,
-      socket
-      |> assign(:expanded_folders, new_expanded)
-      |> push_event("expanded-folders-changed", %{folder_ids: MapSet.to_list(new_expanded)})}
-  end
-
-  @impl true
-  def handle_event("init_expanded_folders", %{"folder_ids" => ids}, socket) do
-    expanded =
-      ids
-      |> Enum.map(fn id ->
-        case id do
-          id when is_integer(id) -> id
-          id when is_binary(id) -> String.to_integer(id)
-        end
-      end)
-      |> MapSet.new()
-
-    {:noreply, assign(socket, :expanded_folders, expanded)}
+     socket
+     |> assign(:expanded_folders, new_expanded)
+     |> push_event("update_expanded_folders_cookie", %{folder_ids: MapSet.to_list(new_expanded)})}
   end
 
   @impl true
@@ -277,10 +290,12 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
     sidebar_tree = Content.build_sidebar_tree(user)
     unread_counts = Content.get_unread_counts(user)
     feeds = extract_feeds_from_tree(sidebar_tree)
+    folders = Content.list_user_folders(user)
 
     socket
     |> assign(:sidebar_tree, sidebar_tree)
     |> assign(:feeds, feeds)
+    |> assign(:folders, folders)
     |> assign(:unread_counts, unread_counts)
   end
 

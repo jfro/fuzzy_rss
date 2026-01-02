@@ -61,7 +61,9 @@ defmodule FuzzyRssWeb.ReaderLive.ImportExport do
     require Logger
     user = socket.assigns.current_user
 
-    Logger.debug("ImportExport: Starting OPML import, uploads: #{inspect(socket.assigns.uploads)}")
+    Logger.debug(
+      "ImportExport: Starting OPML import, uploads: #{inspect(socket.assigns.uploads)}"
+    )
 
     uploaded_files =
       consume_uploaded_entries(socket, :opml_file, fn %{path: path}, _entry ->
@@ -134,8 +136,8 @@ defmodule FuzzyRssWeb.ReaderLive.ImportExport do
       </div>
 
       <h1 class="text-3xl font-bold mb-6">Import & Export</h1>
-
-      <!-- OPML Section -->
+      
+    <!-- OPML Section -->
       <div class="card bg-base-100 shadow-md mb-6">
         <div class="card-body">
           <h2 class="card-title text-lg">OPML Subscriptions</h2>
@@ -144,14 +146,21 @@ defmodule FuzzyRssWeb.ReaderLive.ImportExport do
           </p>
 
           <div class="card-actions mt-4">
-            <button class="btn btn-primary" phx-click="export_opml" phx-target={@myself}>Download OPML</button>
+            <button class="btn btn-primary" phx-click="export_opml" phx-target={@myself}>
+              Download OPML
+            </button>
           </div>
 
           <div class="divider">or</div>
 
           <p class="text-sm text-base-content/60 mb-3">Import subscriptions from an OPML file.</p>
 
-          <form phx-submit="import_opml" phx-change="validate_opml" phx-target={@myself} enctype="multipart/form-data">
+          <form
+            phx-submit="import_opml"
+            phx-change="validate_opml"
+            phx-target={@myself}
+            enctype="multipart/form-data"
+          >
             <div class="form-control">
               <.live_file_input
                 upload={@opml_file_upload}
@@ -163,8 +172,8 @@ defmodule FuzzyRssWeb.ReaderLive.ImportExport do
           </form>
         </div>
       </div>
-
-      <!-- FreshRSS Starred Articles Section -->
+      
+    <!-- FreshRSS Starred Articles Section -->
       <div class="card bg-base-100 shadow-md mb-6">
         <div class="card-body">
           <h2 class="card-title text-lg">Starred Articles</h2>
@@ -184,7 +193,12 @@ defmodule FuzzyRssWeb.ReaderLive.ImportExport do
             Import starred articles from a FreshRSS JSON file.
           </p>
 
-          <form phx-submit="import_starred" phx-change="validate_starred" phx-target={@myself} enctype="multipart/form-data">
+          <form
+            phx-submit="import_starred"
+            phx-change="validate_starred"
+            phx-target={@myself}
+            enctype="multipart/form-data"
+          >
             <div class="form-control">
               <.live_file_input
                 upload={@starred_file_upload}
@@ -196,8 +210,8 @@ defmodule FuzzyRssWeb.ReaderLive.ImportExport do
           </form>
         </div>
       </div>
-
-      <!-- Info Card -->
+      
+    <!-- Info Card -->
       <div class="alert alert-info">
         <svg
           xmlns="http://www.w3.org/2000/svg"

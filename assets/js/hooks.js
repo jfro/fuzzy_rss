@@ -1,18 +1,12 @@
 export const FolderTree = {
   mounted() {
     const userId = this.el.dataset.userId
-    const storageKey = `fuzzy_rss_expanded_folders_${userId}`
-
-    // Read expanded folders from localStorage on mount
-    const stored = localStorage.getItem(storageKey)
-    const folderIds = stored ? JSON.parse(stored) : []
-
-    // Send to server to initialize the expanded state
-    this.pushEvent("init_expanded_folders", { folder_ids: folderIds })
-
-    // Listen for changes from server and update localStorage
-    this.handleEvent("expanded-folders-changed", ({ folder_ids }) => {
-      localStorage.setItem(storageKey, JSON.stringify(folder_ids))
+    this.handleEvent("update_expanded_folders_cookie", ({ folder_ids }) => {
+      const d = new Date();
+      d.setTime(d.getTime() + (365 * 24 * 60 * 60 * 1000)); // 1 year
+      const expires = "expires=" + d.toUTCString();
+      const cookieName = userId ? `expanded_folders_${userId}` : "expanded_folders";
+      document.cookie = cookieName + "=" + encodeURIComponent(JSON.stringify(folder_ids)) + ";" + expires + ";path=/";
     })
   }
 }

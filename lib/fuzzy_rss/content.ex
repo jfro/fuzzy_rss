@@ -298,6 +298,7 @@ defmodule FuzzyRss.Content do
 
     # Build maps for quick lookup
     folders_by_id = Enum.into(all_folders, %{}, &{&1.id, &1})
+
     subscriptions_by_folder_id =
       Enum.group_by(all_subscriptions, & &1.folder_id)
 
@@ -305,13 +306,25 @@ defmodule FuzzyRss.Content do
     root_folders =
       all_folders
       |> Enum.filter(&is_nil(&1.parent_id))
-      |> Enum.map(&build_tree_node(&1, :folder, folders_by_id, subscriptions_by_folder_id, unread_counts, 0))
+      |> Enum.map(
+        &build_tree_node(&1, :folder, folders_by_id, subscriptions_by_folder_id, unread_counts, 0)
+      )
 
     # Add root-level feeds (feeds not assigned to any folder)
     root_feeds =
       subscriptions_by_folder_id
       |> Map.get(nil, [])
-      |> Enum.map(&build_tree_node(&1.feed, :feed, folders_by_id, subscriptions_by_folder_id, unread_counts, 0, &1))
+      |> Enum.map(
+        &build_tree_node(
+          &1.feed,
+          :feed,
+          folders_by_id,
+          subscriptions_by_folder_id,
+          unread_counts,
+          0,
+          &1
+        )
+      )
 
     # Combine and sort
     (root_folders ++ root_feeds)
@@ -324,16 +337,42 @@ defmodule FuzzyRss.Content do
   end
 
   # Builds a single tree node for a folder
-  defp build_tree_node(folder, :folder, folders_by_id, subscriptions_by_folder_id, unread_counts, level) do
+  defp build_tree_node(
+         folder,
+         :folder,
+         folders_by_id,
+         subscriptions_by_folder_id,
+         unread_counts,
+         level
+       ) do
     # Get child folders (already preloaded)
     child_folders =
       (folder.children || [])
-      |> Enum.map(&build_tree_node(&1, :folder, folders_by_id, subscriptions_by_folder_id, unread_counts, level + 1))
+      |> Enum.map(
+        &build_tree_node(
+          &1,
+          :folder,
+          folders_by_id,
+          subscriptions_by_folder_id,
+          unread_counts,
+          level + 1
+        )
+      )
 
     # Get feeds in this folder
     child_feeds =
       (subscriptions_by_folder_id[folder.id] || [])
-      |> Enum.map(&build_tree_node(&1.feed, :feed, folders_by_id, subscriptions_by_folder_id, unread_counts, level + 1, &1))
+      |> Enum.map(
+        &build_tree_node(
+          &1.feed,
+          :feed,
+          folders_by_id,
+          subscriptions_by_folder_id,
+          unread_counts,
+          level + 1,
+          &1
+        )
+      )
 
     children = child_folders ++ child_feeds
 
@@ -358,7 +397,15 @@ defmodule FuzzyRss.Content do
   end
 
   # Builds a single tree node for a feed
-  defp build_tree_node(feed, :feed, _folders_by_id, _subscriptions_by_folder_id, unread_counts, level, subscription) do
+  defp build_tree_node(
+         feed,
+         :feed,
+         _folders_by_id,
+         _subscriptions_by_folder_id,
+         unread_counts,
+         level,
+         subscription
+       ) do
     %{
       type: :feed,
       id: feed.id,
@@ -371,7 +418,12 @@ defmodule FuzzyRss.Content do
   end
 
   # Calculates the total unread count for a folder and all its descendants
-  defp calculate_folder_unread_count(folder_id, subscriptions_by_folder_id, folders_by_id, unread_counts) do
+  defp calculate_folder_unread_count(
+         folder_id,
+         subscriptions_by_folder_id,
+         folders_by_id,
+         unread_counts
+       ) do
     # Get direct feed subscriptions in this folder
     direct_feeds_unread =
       subscriptions_by_folder_id

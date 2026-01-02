@@ -23,7 +23,11 @@ defmodule FuzzyRss.Feeds.OPML do
          outlines <- extract_outlines(document) do
       Logger.debug("OPML: Found #{Enum.count(outlines)} root outlines")
       results = process_outlines(outlines, user, nil)
-      Logger.info("OPML: Import complete - #{results.created_feeds} feeds, #{results.created_folders} folders, #{Enum.count(results.errors)} errors")
+
+      Logger.info(
+        "OPML: Import complete - #{results.created_feeds} feeds, #{results.created_folders} folders, #{Enum.count(results.errors)} errors"
+      )
+
       Logger.debug("OPML: Errors: #{inspect(results.errors)}")
       {:ok, results}
     else

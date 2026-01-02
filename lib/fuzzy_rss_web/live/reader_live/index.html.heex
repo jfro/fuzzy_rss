@@ -11,7 +11,11 @@
             <%= if @selected_feed do %>
               {(Enum.find(@feeds, &(&1.id == @selected_feed)) || %{title: "Feed"}).title}
             <% else %>
-              {if @filter == :starred, do: "⭐ Starred", else: "📰 All Entries"}
+              <%= if @selected_folder do %>
+                {(Enum.find(@folders, &(&1.id == @selected_folder)) || %{name: "Folder"}).name} - All Entries
+              <% else %>
+                {if @filter == :starred, do: "⭐ Starred", else: "📰 All Entries"}
+              <% end %>
             <% end %>
           </h2>
         </div>
@@ -81,8 +85,8 @@
         <% end %>
       </div>
     </div>
-
-    <!-- Entry Detail -->
+    
+<!-- Entry Detail -->
     <%= if @selected_entry do %>
       <.live_component
         module={FuzzyRssWeb.ReaderLive.EntryDetail}
