@@ -2,5 +2,45 @@
 erlang = "28"
 node = "22"
 elixir = "1.19"
+
 [env]
 DATABASE_ADAPTER = "postgresql"
+
+[tasks."test:sqlite"]
+description = "Run tests with SQLite"
+env.DATABASE_ADAPTER = "sqlite"
+run = "mix test"
+
+[tasks."test:mysql"]
+description = "Run tests with MySQL"
+env.DATABASE_ADAPTER = "mysql"
+run = "mix test"
+
+[tasks."test:postgresql"]
+description = "Run tests with PostgreSQL"
+env.DATABASE_ADAPTER = "postgresql"
+run = "mix test"
+
+[tasks.test]
+description = "Run tests with all database adapters"
+depends = ["test:*"]
+run = "mise run test.sqlite && mise run test.mysql && mise run test.postgresql"
+
+[tasks."precommit:sqlite"]
+description = "Run precommit checks with SQLite"
+env.DATABASE_ADAPTER = "sqlite"
+run = "mix precommit"
+
+[tasks."precommit:mysql"]
+description = "Run precommit checks with MySQL"
+env.DATABASE_ADAPTER = "mysql"
+run = "mix precommit"
+
+[tasks."precommit:postgresql"]
+description = "Run precommit checks with PostgreSQL"
+env.DATABASE_ADAPTER = "postgresql"
+run = "mix precommit"
+
+[tasks.precommit]
+description = "Run precommit checks with all database adapters"
+depends = ["precommit:*"]

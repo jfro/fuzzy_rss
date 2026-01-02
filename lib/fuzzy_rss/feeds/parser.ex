@@ -41,6 +41,7 @@ defmodule FuzzyRss.Feeds.Parser do
       opts = [
         {:quiet, true}
       ]
+
       {doc, _} = :xmerl_scan.file(String.to_charlist(temp_file), opts)
       File.rm(temp_file)
 
@@ -183,10 +184,11 @@ defmodule FuzzyRss.Feeds.Parser do
 
   defp extract_atom_from_content(content) when is_list(content) do
     # Filter to only xmlElement nodes (skip text nodes, namespaces, etc)
-    elements = Enum.filter(content, fn
-      {:xmlElement, _, _, _, _, _, _, _, _, _, _, _} -> true
-      _ -> false
-    end)
+    elements =
+      Enum.filter(content, fn
+        {:xmlElement, _, _, _, _, _, _, _, _, _, _, _} -> true
+        _ -> false
+      end)
 
     feed_title = extract_text_from_element_list(elements, :title) || "Untitled"
     feed_description = extract_text_from_element_list(elements, :subtitle)
@@ -220,13 +222,18 @@ defmodule FuzzyRss.Feeds.Parser do
   defp extract_atom_entry(element) when is_tuple(element) do
     # Content is at position 8
     content = elem(element, 8)
+
     %{
-      guid: extract_text_from_element_list(content, :id) || extract_link_from_element_list(content, :alternate),
+      guid:
+        extract_text_from_element_list(content, :id) ||
+          extract_link_from_element_list(content, :alternate),
       url: extract_link_from_element_list(content, :alternate),
       title: extract_text_from_element_list(content, :title) || "Untitled",
       author: extract_author_from_content(content),
       summary: extract_text_from_element_list(content, :summary),
-      content: extract_text_from_element_list(content, :content) || extract_text_from_element_list(content, :summary),
+      content:
+        extract_text_from_element_list(content, :content) ||
+          extract_text_from_element_list(content, :summary),
       published_at: parse_iso8601_date(extract_text_from_element_list(content, :published)),
       image_url: nil,
       categories: extract_categories_from_content(content)
@@ -243,6 +250,7 @@ defmodule FuzzyRss.Feeds.Parser do
           # Content is at position 8, not 4
           content = elem(item, 8)
           extract_text_from_content(content)
+
         _ ->
           nil
       end
@@ -257,15 +265,20 @@ defmodule FuzzyRss.Feeds.Parser do
       # xmlText is a 6-tuple: {:xmlText, parents, pos, language, text, type}
       {:xmlText, _parents, _pos, _language, text, _type} when is_list(text) ->
         text |> List.to_string()
+
       {:xmlText, _parents, _pos, _language, text, _type} when is_binary(text) ->
         text
+
       # Also handle old format if needed (5-tuple without type)
       {:xmlText, _parents, _pos, _language, text} when is_list(text) ->
         text |> List.to_string()
+
       {:xmlText, _parents, _pos, _language, text} when is_binary(text) ->
         text
+
       text when is_binary(text) ->
         text
+
       _ ->
         nil
     end)

@@ -7,6 +7,7 @@ defmodule FuzzyRssWeb.ReaderLive.EntryDetail do
 
   def render(assigns) do
     assigns = assign(assigns, :is_starred, is_starred?(assigns.selected_entry))
+
     ~H"""
     <article class="w-1/2 bg-base-100 overflow-y-auto border-l border-base-300">
       <div class="p-6">
@@ -27,7 +28,11 @@ defmodule FuzzyRssWeb.ReaderLive.EntryDetail do
             <button
               phx-click="toggle_starred"
               phx-value-entry_id={@selected_entry.id}
-              class={if @is_starred, do: "btn btn-sm btn-primary gap-2", else: "btn btn-sm btn-outline gap-2"}
+              class={
+                if @is_starred,
+                  do: "btn btn-sm btn-primary gap-2",
+                  else: "btn btn-sm btn-outline gap-2"
+              }
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

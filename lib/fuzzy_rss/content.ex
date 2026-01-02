@@ -319,50 +319,60 @@ defmodule FuzzyRss.Content do
 
     # For starred filter, also include archived starred entries
     if filter == :starred && is_nil(feed_id) && is_nil(folder_id) do
-      live_entries = query
+      live_entries =
+        query
         |> repo().all()
-        |> repo().preload([user_entry_states: from(ues in UserEntryState, where: ues.user_id == ^user.id)])
+        |> repo().preload(
+          user_entry_states: from(ues in UserEntryState, where: ues.user_id == ^user.id)
+        )
 
-      archived_entries = repo().all(
-        from se in StarredEntry,
-          where: se.user_id == ^user.id,
-          order_by: [desc: se.starred_at]
-      )
+      archived_entries =
+        repo().all(
+          from se in StarredEntry,
+            where: se.user_id == ^user.id,
+            order_by: [desc: se.starred_at]
+        )
 
       # Convert archived entries to Entry-like format with the original feed info
-      archived_as_entries = Enum.map(archived_entries, fn se ->
-        %Entry{
-          id: -se.id,  # Use negative ID to distinguish from real entries
-          guid: se.guid,
-          url: se.url,
-          title: se.title,
-          author: se.author,
-          content: se.content,
-          summary: se.summary,
-          published_at: se.published_at,
-          image_url: se.image_url,
-          categories: se.categories,
-          feed: %Feed{title: se.feed_title || "Archived", url: se.feed_url},
-          user_entry_states: [],
-          inserted_at: se.inserted_at
-        }
-      end)
+      archived_as_entries =
+        Enum.map(archived_entries, fn se ->
+          %Entry{
+            # Use negative ID to distinguish from real entries
+            id: -se.id,
+            guid: se.guid,
+            url: se.url,
+            title: se.title,
+            author: se.author,
+            content: se.content,
+            summary: se.summary,
+            published_at: se.published_at,
+            image_url: se.image_url,
+            categories: se.categories,
+            feed: %Feed{title: se.feed_title || "Archived", url: se.feed_url},
+            user_entry_states: [],
+            inserted_at: se.inserted_at
+          }
+        end)
 
       # Combine and sort by published_at, then apply limit/offset
-      combined = (live_entries ++ archived_as_entries)
+      combined =
+        (live_entries ++ archived_as_entries)
         |> Enum.sort_by(&(&1.published_at || DateTime.utc_now()), {:desc, DateTime})
         |> Enum.slice(offset, limit)
 
       combined
     else
-      entries = query
+      entries =
+        query
         |> limit(^limit)
         |> offset(^offset)
         |> repo().all()
 
       # Manually load user entry states for the result
       entries
-      |> repo().preload([user_entry_states: from(ues in UserEntryState, where: ues.user_id == ^user.id)])
+      |> repo().preload(
+        user_entry_states: from(ues in UserEntryState, where: ues.user_id == ^user.id)
+      )
     end
   end
 
@@ -541,7 +551,9 @@ defmodule FuzzyRss.Content do
 
   def delete_starred_entry(user, entry_id) do
     case get_entry_state(user, entry_id) do
-      nil -> {:error, :not_found}
+      nil ->
+        {:error, :not_found}
+
       state ->
         state
         |> UserEntryState.changeset(%{starred: false, starred_at: nil})

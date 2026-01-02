@@ -86,7 +86,10 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
     socket = assign(socket, :entries, entries)
 
     # Update selected_entry to the fresh version
-    selected_entry = if socket.assigns.selected_entry && socket.assigns.selected_entry.id == entry_id, do: fresh_entry, else: socket.assigns.selected_entry
+    selected_entry =
+      if socket.assigns.selected_entry && socket.assigns.selected_entry.id == entry_id,
+        do: fresh_entry,
+        else: socket.assigns.selected_entry
 
     {:noreply, assign(socket, :selected_entry, selected_entry)}
   end
@@ -103,6 +106,7 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
     # Only allow toggling when viewing a specific feed
     if socket.assigns.selected_feed do
       new_filter = if socket.assigns.filter == :unread, do: :all, else: :unread
+
       socket
       |> assign(:filter, new_filter)
       |> load_entries()
@@ -189,7 +193,10 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
     case Content.unsubscribe_from_feed(socket.assigns.current_user, feed_id) do
       {:ok, :feed_deleted} ->
         socket
-        |> put_flash(:info, "Unsubscribed successfully. Feed was removed (you were the last subscriber).")
+        |> put_flash(
+          :info,
+          "Unsubscribed successfully. Feed was removed (you were the last subscriber)."
+        )
         |> load_sidebar_data()
         |> load_entries()
         |> then(&{:noreply, &1})

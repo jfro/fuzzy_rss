@@ -90,10 +90,18 @@ defmodule FuzzyRssWeb.ReaderLive.Sidebar do
         <div class="px-4 py-2 flex items-center justify-between">
           <span class="font-semibold text-sm text-base-content/70">Feeds</span>
           <div class="flex gap-1">
-            <button phx-click="toggle_feed_modal" class="btn btn-xs btn-circle btn-ghost" title="Manage feeds">
+            <button
+              phx-click="toggle_feed_modal"
+              class="btn btn-xs btn-circle btn-ghost"
+              title="Manage feeds"
+            >
               <.icon name="hero-cog-6-tooth" class="size-3" />
             </button>
-            <button phx-click="toggle_add_feed_modal" class="btn btn-xs btn-circle btn-ghost" title="Add feed">
+            <button
+              phx-click="toggle_add_feed_modal"
+              class="btn btn-xs btn-circle btn-ghost"
+              title="Add feed"
+            >
               <.icon name="hero-plus" class="size-3" />
             </button>
           </div>

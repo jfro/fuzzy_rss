@@ -98,8 +98,15 @@ end
 # Store the selected repo module for use throughout the app
 config :fuzzy_rss, :repo_module, repo_module
 
-# Configure Oban repo based on selected database adapter
-config :fuzzy_rss, Oban, repo: repo_module
+# Configure Oban with database-appropriate engine
+oban_engine =
+  case db_adapter do
+    :sqlite -> Oban.Engines.Lite
+    :mysql -> Oban.Engines.Dolphin
+    :postgresql -> Oban.Engines.Basic
+  end
+
+config :fuzzy_rss, Oban, repo: repo_module, engine: oban_engine
 
 # ## Using releases
 #

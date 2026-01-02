@@ -46,9 +46,7 @@ defmodule FuzzyRss.Workers.FeedFetcherWorker do
             Logger.debug("FeedFetcherWorker: Saved entry #{entry.id}: #{entry.title}")
 
           {:error, changeset} ->
-            Logger.error(
-              "FeedFetcherWorker: Failed to save entry: #{inspect(changeset.errors)}"
-            )
+            Logger.error("FeedFetcherWorker: Failed to save entry: #{inspect(changeset.errors)}")
         end
       rescue
         e ->

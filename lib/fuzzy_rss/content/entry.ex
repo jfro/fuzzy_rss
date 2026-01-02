@@ -13,7 +13,7 @@ defmodule FuzzyRss.Content.Entry do
     field :extracted_content, :string
     field :extracted_at, :utc_datetime
     field :image_url, :string
-    field :categories, {:array, :string}, default: []
+    field :categories, FuzzyRss.Ecto.JSONArray, default: []
 
     belongs_to :feed, FuzzyRss.Content.Feed
 

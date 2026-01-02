@@ -98,9 +98,8 @@ config :ueberauth, Ueberauth.Strategy.OIDC,
 config :fuzzy_rss, :oidc_enabled, System.get_env("OIDC_ENABLED", "false") == "true"
 
 # Configure Oban for background job processing
-# Note: The repo is configured in runtime.exs based on DATABASE_ADAPTER
+# Note: The repo and engine are configured in runtime.exs based on DATABASE_ADAPTER
 config :fuzzy_rss, Oban,
-  engine: Oban.Engines.Basic,
   queues: [feed_fetcher: 10, extractor: 3, default: 5],
   plugins: [
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},

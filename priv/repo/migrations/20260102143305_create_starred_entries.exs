@@ -12,7 +12,7 @@ defmodule FuzzyRss.Repo.Migrations.CreateStarredEntries do
       add :summary, :text
       add :published_at, :utc_datetime
       add :image_url, :string
-      add :categories, {:array, :string}, default: []
+      add :categories, :string, default: "[]"
       add :feed_title, :string
       add :feed_url, :string
       add :starred_at, :utc_datetime, null: false

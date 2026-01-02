@@ -14,7 +14,7 @@ defmodule FuzzyRss.Repo.Migrations.CreateEntries do
       add :extracted_content, :text
       add :extracted_at, :utc_datetime
       add :image_url, :string
-      add :categories, {:array, :string}, default: []
+      add :categories, :string, default: "[]"
       timestamps()
     end
 

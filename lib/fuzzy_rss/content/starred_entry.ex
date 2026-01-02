@@ -12,7 +12,7 @@ defmodule FuzzyRss.Content.StarredEntry do
     field :summary, :string
     field :published_at, :utc_datetime
     field :image_url, :string
-    field :categories, {:array, :string}, default: []
+    field :categories, FuzzyRss.Ecto.JSONArray, default: []
     field :feed_title, :string
     field :feed_url, :string
     field :starred_at, :utc_datetime
