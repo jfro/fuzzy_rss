@@ -9,7 +9,7 @@ defmodule FuzzyRssWeb.ReaderLive.EntryDetail do
     assigns = assign(assigns, :is_starred, is_starred?(assigns.selected_entry))
 
     ~H"""
-    <article class="w-1/2 bg-base-100 overflow-y-auto border-l border-base-300">
+    <article class="flex-1 bg-base-100 overflow-y-auto border-l border-base-300 min-w-0">
       <div class="p-6">
         <div class="mb-6">
           <h1 class="text-3xl font-bold mb-3">{@selected_entry.title}</h1>

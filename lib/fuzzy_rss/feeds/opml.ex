@@ -16,12 +16,20 @@ defmodule FuzzyRss.Feeds.OPML do
   end
 
   def import(xml_string, user) do
+    require Logger
+    Logger.debug("OPML: Starting import, input size: #{byte_size(xml_string)}")
+
     with {:ok, document} <- parse_opml(xml_string),
          outlines <- extract_outlines(document) do
+      Logger.debug("OPML: Found #{Enum.count(outlines)} root outlines")
       results = process_outlines(outlines, user, nil)
+      Logger.info("OPML: Import complete - #{results.created_feeds} feeds, #{results.created_folders} folders, #{Enum.count(results.errors)} errors")
+      Logger.debug("OPML: Errors: #{inspect(results.errors)}")
       {:ok, results}
     else
-      {:error, reason} -> {:error, reason}
+      {:error, reason} ->
+        Logger.error("OPML: Import failed - #{inspect(reason)}")
+        {:error, reason}
     end
   end
 
@@ -102,12 +110,33 @@ defmodule FuzzyRss.Feeds.OPML do
   end
 
   defp process_outlines(outlines, user, parent_folder_id) do
+    require Logger
     results = %{created_feeds: 0, created_folders: 0, errors: []}
 
     Enum.reduce(outlines, results, fn outline, acc ->
       type = Floki.attribute(outline, "type") |> List.first()
+      text = Floki.attribute(outline, "text") |> List.first()
+      xml_url = Floki.attribute(outline, "xmlurl") |> List.first()
+      children = Floki.find(outline, "> outline")
+      has_children = Enum.count(children) > 0
 
-      case type do
+      # Infer type based on actual content:
+      # - If it has xmlUrl, it's definitely a feed
+      # - If it has children (regardless of explicit type), treat as folder
+      # - Otherwise use the explicit type if provided
+      inferred_type =
+        cond do
+          xml_url -> "rss"
+          has_children -> "folder"
+          type in ["folder", "rss"] -> type
+          true -> nil
+        end
+
+      Logger.debug(
+        "OPML: Processing outline - type: #{inspect(inferred_type)}, text: #{inspect(text)}, has_children: #{has_children}, xmlUrl: #{inspect(xml_url)}"
+      )
+
+      case inferred_type do
         "folder" ->
           process_folder(outline, user, parent_folder_id, acc)
 
@@ -115,6 +144,7 @@ defmodule FuzzyRss.Feeds.OPML do
           process_feed(outline, user, parent_folder_id, acc)
 
         _ ->
+          Logger.debug("OPML: Skipping outline with no type: #{inspect(text)}")
           acc
       end
     end)
@@ -140,14 +170,18 @@ defmodule FuzzyRss.Feeds.OPML do
   end
 
   defp process_feed(outline, user, folder_id, acc) do
-    feed_url = Floki.attribute(outline, "xmlUrl") |> List.first()
+    feed_url = Floki.attribute(outline, "xmlurl") |> List.first()
 
-    case Content.subscribe_to_feed(user, feed_url, folder_id: folder_id) do
-      {:ok, _subscription} ->
-        %{acc | created_feeds: acc.created_feeds + 1}
+    if feed_url && String.length(feed_url) > 0 do
+      case Content.subscribe_to_feed(user, feed_url, folder_id: folder_id) do
+        {:ok, _subscription} ->
+          %{acc | created_feeds: acc.created_feeds + 1}
 
-      {:error, reason} ->
-        Map.update(acc, :errors, [reason], &[reason | &1])
+        {:error, reason} ->
+          Map.update(acc, :errors, [reason], &[reason | &1])
+      end
+    else
+      Map.update(acc, :errors, ["Feed missing xmlUrl"], &[&1 | &1])
     end
   end
 

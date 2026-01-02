@@ -9,8 +9,16 @@ defmodule FuzzyRssWeb.SettingsLive.ImportExport do
      socket
      |> assign(:opml_filename, "fuzzyrss-subscriptions.opml")
      |> assign(:freshrss_filename, "fuzzyrss-starred.json")
-     |> allow_upload(:opml_file, accept: ~w(.xml), max_entries: 1)
-     |> allow_upload(:starred_file, accept: ~w(.json), max_entries: 1)}
+     |> allow_upload(:opml_file,
+       accept: ~w(.xml),
+       max_entries: 1,
+       auto_upload: true
+     )
+     |> allow_upload(:starred_file,
+       accept: ~w(.json),
+       max_entries: 1,
+       auto_upload: true
+     )}
   end
 
   @impl true
@@ -55,27 +63,38 @@ defmodule FuzzyRssWeb.SettingsLive.ImportExport do
 
   @impl true
   def handle_event("import_opml", _params, socket) do
+    require Logger
     user = socket.assigns.current_user
+
+    Logger.debug("ImportExport: Starting OPML import, uploads: #{inspect(socket.assigns.uploads)}")
 
     uploaded_files =
       consume_uploaded_entries(socket, :opml_file, fn %{path: path}, _entry ->
+        Logger.debug("ImportExport: Reading file from #{path}")
         {:ok, File.read!(path)}
       end)
 
+    Logger.debug("ImportExport: Consumed #{Enum.count(uploaded_files)} files")
+
     case uploaded_files do
       [xml | _] ->
+        Logger.debug("ImportExport: Importing OPML, size: #{byte_size(xml)}")
+
         case OPML.import(xml, user) do
           {:ok, results} ->
             message =
               "Imported #{results.created_feeds} feeds and #{results.created_folders} folders"
 
+            Logger.info("ImportExport: #{message}")
             {:noreply, put_flash(socket, :info, message)}
 
           {:error, reason} ->
+            Logger.error("ImportExport: Import failed: #{inspect(reason)}")
             {:noreply, put_flash(socket, :error, "Import failed: #{inspect(reason)}")}
         end
 
       [] ->
+        Logger.warning("ImportExport: No files uploaded")
         {:noreply, put_flash(socket, :error, "No file uploaded")}
     end
   end

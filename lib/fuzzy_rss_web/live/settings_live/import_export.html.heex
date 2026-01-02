@@ -21,11 +21,12 @@
 
       <p class="text-sm text-base-content/60 mb-3">Import subscriptions from an OPML file.</p>
 
-      <form phx-submit="import_opml" phx-change="validate_opml">
+      <form phx-submit="import_opml" phx-change="validate_opml" enctype="multipart/form-data">
         <div class="form-control">
           <.live_file_input
             upload={@uploads.opml_file}
             class="file-input file-input-bordered w-full"
+            required
           />
           <button type="submit" class="btn btn-primary mt-2">Import OPML</button>
         </div>
@@ -53,11 +54,12 @@
         Import starred articles from a FreshRSS JSON file.
       </p>
 
-      <form phx-submit="import_starred" phx-change="validate_starred">
+      <form phx-submit="import_starred" phx-change="validate_starred" enctype="multipart/form-data">
         <div class="form-control">
           <.live_file_input
             upload={@uploads.starred_file}
             class="file-input file-input-bordered w-full"
+            required
           />
           <button type="submit" class="btn btn-primary mt-2">Import Starred</button>
         </div>

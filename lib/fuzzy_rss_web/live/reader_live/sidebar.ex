@@ -8,7 +8,7 @@ defmodule FuzzyRssWeb.ReaderLive.Sidebar do
 
   def render(assigns) do
     ~H"""
-    <aside class="w-64 bg-base-200 overflow-y-auto flex flex-col border-r border-base-300">
+    <aside class="w-64 flex-shrink-0 bg-base-200 overflow-y-auto flex flex-col border-r border-base-300">
       <div class="p-4 border-b border-base-300">
         <h1 class="text-2xl font-bold text-primary">📰 FuzzyRSS</h1>
         <%= if @current_user do %>
@@ -63,27 +63,29 @@ defmodule FuzzyRssWeb.ReaderLive.Sidebar do
 
         <div class="divider my-0"></div>
 
-        <ul class="menu menu-compact p-2">
-          <li class="menu-title">
-            <span>Folders</span>
-          </li>
+        <div class="px-4 py-2 flex items-center justify-between">
+          <span class="font-semibold text-sm text-base-content/70">Folders</span>
+        </div>
+
+        <div class="space-y-0">
           <%= if Enum.empty?(@folders) do %>
-            <li class="disabled"><a class="text-xs opacity-50">No folders</a></li>
+            <div class="px-4 py-2 text-xs opacity-50">No folders</div>
           <% else %>
             <%= for folder <- @folders do %>
-              <li>
-                <.link navigate={~p"/app/folder/#{folder.id}"} class="flex items-center gap-2">
-                  <span class="flex-1 truncate">{folder.name}</span>
-                  <%= if Map.get(@unread_counts, folder.id, 0) > 0 do %>
-                    <span class="badge badge-sm badge-primary flex-shrink-0">
-                      {Map.get(@unread_counts, folder.id, 0)}
-                    </span>
-                  <% end %>
-                </.link>
-              </li>
+              <.link
+                navigate={~p"/app/folder/#{folder.id}"}
+                class="flex items-center justify-between px-4 py-2 text-xs hover:bg-base-300 transition-colors block w-full"
+              >
+                <span class="flex-1 truncate">{folder.name}</span>
+                <%= if Map.get(@unread_counts, folder.id, 0) > 0 do %>
+                  <span class="badge badge-xs badge-primary flex-shrink-0 ml-2">
+                    {Map.get(@unread_counts, folder.id, 0)}
+                  </span>
+                <% end %>
+              </.link>
             <% end %>
           <% end %>
-        </ul>
+        </div>
 
         <div class="divider my-0"></div>
 

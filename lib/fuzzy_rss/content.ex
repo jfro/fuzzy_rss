@@ -28,25 +28,50 @@ defmodule FuzzyRss.Content do
   """
   def subscribe_to_feed(user, feed_url, opts \\ []) do
     require Logger
-    feed = repo().get_by(Feed, url: feed_url) || create_feed!(feed_url)
 
-    result =
-      %Subscription{}
-      |> Subscription.changeset(%{
-        user_id: user.id,
-        feed_id: feed.id,
-        folder_id: opts[:folder_id]
-      })
-      |> repo().insert()
+    with :ok <- validate_url(feed_url),
+         feed <- get_or_create_feed(feed_url),
+         {:ok, subscription} <-
+           %Subscription{}
+           |> Subscription.changeset(%{
+             user_id: user.id,
+             feed_id: feed.id,
+             folder_id: opts[:folder_id]
+           })
+           |> repo().insert() do
+      # Queue immediate fetch for new subscriptions
+      Logger.info("Content: Queueing immediate fetch for feed #{feed.id} (#{feed.url})")
 
-    # Queue immediate fetch for new subscriptions
-    Logger.info("Content: Queueing immediate fetch for feed #{feed.id} (#{feed.url})")
+      %{feed_id: feed.id}
+      |> FuzzyRss.Workers.FeedFetcherWorker.new()
+      |> Oban.insert()
 
-    %{feed_id: feed.id}
-    |> FuzzyRss.Workers.FeedFetcherWorker.new()
-    |> Oban.insert()
+      {:ok, subscription}
+    else
+      error -> error
+    end
+  end
 
-    result
+  defp validate_url(url) when is_binary(url) and byte_size(url) > 0, do: :ok
+  defp validate_url(_), do: {:error, "Invalid URL"}
+
+  defp get_or_create_feed(feed_url) do
+    case repo().get_by(Feed, url: feed_url) do
+      %Feed{} = feed ->
+        feed
+
+      nil ->
+        case create_feed(feed_url) do
+          {:ok, feed} -> feed
+          {:error, _} -> raise "Failed to create feed"
+        end
+    end
+  end
+
+  defp create_feed(url) do
+    %Feed{}
+    |> Feed.changeset(%{url: url})
+    |> repo().insert()
   end
 
   @doc """
@@ -221,12 +246,6 @@ defmodule FuzzyRss.Content do
     {:ok, length(feeds)}
   end
 
-  defp create_feed!(url) do
-    %Feed{}
-    |> Feed.changeset(%{url: url})
-    |> repo().insert!()
-  end
-
   ## Folder management
 
   @doc """
@@ -245,7 +264,7 @@ defmodule FuzzyRss.Content do
   """
   def create_folder(user, attrs) do
     %Folder{}
-    |> Folder.changeset(Map.put(attrs, "user_id", user.id))
+    |> Folder.changeset(Map.put(attrs, :user_id, user.id))
     |> repo().insert()
   end
 
