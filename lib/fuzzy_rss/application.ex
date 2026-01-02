@@ -16,6 +16,7 @@ defmodule FuzzyRss.Application do
     children = [
       FuzzyRssWeb.Telemetry,
       repo_module,
+      {Oban, Application.fetch_env!(:fuzzy_rss, Oban)},
       {DNSCluster, query: Application.get_env(:fuzzy_rss, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: FuzzyRss.PubSub},
       # Start a worker by calling: FuzzyRss.Worker.start_link(arg)

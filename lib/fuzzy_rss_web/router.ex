@@ -24,7 +24,7 @@ defmodule FuzzyRssWeb.Router do
   scope "/", FuzzyRssWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    get "/", PageController, :redirect_to_app
   end
 
   # Other scopes may use custom stacks.
@@ -64,6 +64,29 @@ defmodule FuzzyRssWeb.Router do
     get "/users/settings", UserSettingsController, :edit
     put "/users/settings", UserSettingsController, :update
     get "/users/settings/confirm-email/:token", UserSettingsController, :confirm_email
+  end
+
+  ## Application routes
+
+  scope "/app", FuzzyRssWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live_session :authenticated,
+      on_mount: [{FuzzyRssWeb.UserAuth, :ensure_authenticated}] do
+      live "/", ReaderLive.Index, :index
+      live "/folder/:folder_id", ReaderLive.Index, :folder
+      live "/feed/:feed_id", ReaderLive.Index, :feed
+      live "/starred", ReaderLive.Index, :starred
+
+      live "/feeds", FeedLive.Index, :index
+      live "/feeds/new", FeedLive.Form, :new
+      live "/feeds/discover", FeedLive.Discover, :discover
+
+      live "/folders", FolderLive.Index, :index
+
+      live "/settings", SettingsLive.Index, :index
+      live "/settings/import-export", SettingsLive.ImportExport, :import_export
+    end
   end
 
   scope "/", FuzzyRssWeb do

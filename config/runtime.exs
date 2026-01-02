@@ -98,6 +98,9 @@ end
 # Store the selected repo module for use throughout the app
 config :fuzzy_rss, :repo_module, repo_module
 
+# Configure Oban repo based on selected database adapter
+config :fuzzy_rss, Oban, repo: repo_module
+
 # ## Using releases
 #
 # If you use `mix release`, you need to explicitly enable the server

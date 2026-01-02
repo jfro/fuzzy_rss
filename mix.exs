@@ -108,17 +108,14 @@ defmodule FuzzyRss.MixProject do
       {:bcrypt_elixir, "~> 3.0"},
       # OAuth/OIDC authentication
       {:ueberauth, "~> 0.10"},
-      {:ueberauth_oidcc, "~> 0.4"}
+      {:ueberauth_oidcc, "~> 0.4"},
 
-      # RSS & Feed Processing (commented out for now - will add in Phase 4)
-      # {:feeder_ex, "~> 1.1"},          # RSS/Atom parsing
-      # {:oban, "~> 2.18"},              # Background jobs
-      # {:floki, "~> 0.36"},             # HTML parsing
-      # {:readability, "~> 0.12"},       # Article extraction
-      # {:saxy, "~> 1.5"},               # OPML/XML parsing
-      # {:joken, "~> 2.6"},              # JWT for API
-      # {:timex, "~> 3.7"},              # Date/time handling
-      # {:slugify, "~> 1.3"}             # URL-friendly slugs
+      # RSS & Feed Processing
+      {:fast_rss, "~> 0.5"},
+      {:oban, "~> 2.18"},
+      {:floki, "~> 0.36"},
+      {:readability, "~> 0.12"},
+      {:timex, "~> 3.7"}
     ]
   end
 

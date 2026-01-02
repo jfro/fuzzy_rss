@@ -1,0 +1,227 @@
+<div class="flex h-screen bg-base-100">
+  <!-- Sidebar -->
+  <.live_component module={FuzzyRssWeb.ReaderLive.Sidebar} id="sidebar" {assigns} />
+  
+<!-- Entry List -->
+  <div class="flex-1 flex flex-col bg-base-100">
+    <div class="navbar bg-base-200 border-b border-base-300">
+      <div class="flex-1">
+        <h2 class="text-xl font-bold">
+          <%= if @selected_feed do %>
+            {(Enum.find(@feeds, &(&1.id == @selected_feed)) || %{title: "Feed"}).title}
+          <% else %>
+            {if @filter == :starred, do: "⭐ Starred", else: "📰 All Entries"}
+          <% end %>
+        </h2>
+      </div>
+      <div class="flex-none flex gap-2">
+        <%= if @selected_feed do %>
+          <button
+            phx-click="toggle_feed_filter"
+            class="btn btn-sm btn-ghost gap-2"
+            title="Toggle between unread and all articles"
+          >
+            {if @filter == :unread, do: "📖 Unread", else: "📋 All"}
+          </button>
+        <% end %>
+        <button phx-click="mark_all_read" class="btn btn-sm btn-ghost gap-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
+          Mark All Read
+        </button>
+      </div>
+    </div>
+
+    <div class="overflow-y-auto flex-1">
+      <%= if Enum.empty?(@entries) do %>
+        <div class="flex items-center justify-center h-full">
+          <div class="text-center">
+            <p class="text-base-content/60 text-lg">No entries to display</p>
+            <p class="text-base-content/40 text-sm mt-2">Add some feeds to get started!</p>
+          </div>
+        </div>
+      <% else %>
+        <%= for entry <- @entries do %>
+          <% read = is_read?(entry) %>
+          <div
+            phx-click="select_entry"
+            phx-value-entry_id={entry.id}
+            class={"card card-compact bg-base-100 hover:bg-base-200 cursor-pointer transition-colors border-b border-base-300 rounded-none #{if @selected_entry && @selected_entry.id == entry.id, do: "bg-primary/20"} #{if read, do: "opacity-60"}"}
+          >
+            <div class="card-body">
+              <h3 class={"card-title text-base #{if read, do: "font-normal text-base-content/70", else: "font-semibold"}"}>
+                {entry.title}
+              </h3>
+              <div class="flex gap-2 items-center text-xs text-base-content/60">
+                <span class="badge badge-ghost badge-sm">{entry.feed.title}</span>
+                <span>·</span>
+                <span>{Calendar.strftime(entry.published_at, "%b %d, %Y")}</span>
+              </div>
+              <%= if entry.summary do %>
+                <p class={"text-sm line-clamp-2 #{if read, do: "text-base-content/50", else: "text-base-content/80"}"}>
+                  {entry.summary}
+                </p>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+  
+<!-- Entry Detail -->
+  <%= if @selected_entry do %>
+    <.live_component
+      module={FuzzyRssWeb.ReaderLive.EntryDetail}
+      id="entry_detail"
+      selected_entry={@selected_entry}
+    />
+  <% end %>
+</div>
+
+<!-- Feed Management Modal -->
+<div class={if @show_feed_modal, do: "modal modal-open", else: "modal"}>
+  <div class="modal-box max-w-2xl">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-bold text-lg">Manage Feeds</h3>
+      <button phx-click="toggle_feed_modal" class="btn btn-sm btn-circle btn-ghost">
+        ✕
+      </button>
+    </div>
+
+    <%= if Enum.empty?(@feeds) do %>
+      <div class="alert alert-info">
+        <span>No feeds yet. <.link navigate={~p"/app/feeds/new"} class="link">Add a feed</.link> to get started!</span>
+      </div>
+    <% else %>
+      <div class="space-y-2 mb-4 max-h-96 overflow-y-auto">
+        <%= for feed <- @feeds do %>
+          <div class="card bg-base-200 border border-base-300">
+            <div class="card-body p-3">
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <h4 class="font-semibold text-sm">{feed.title || "Untitled"}</h4>
+                  <p class="text-xs text-base-content/60 mt-1">{feed.url}</p>
+                  <%= if feed.last_fetched_at do %>
+                    <p class="text-xs text-base-content/50 mt-1">
+                      Last fetched: {Calendar.strftime(feed.last_fetched_at, "%b %d, %Y at %H:%M")}
+                    </p>
+                  <% else %>
+                    <p class="text-xs text-base-content/50 mt-1">Never fetched</p>
+                  <% end %>
+                  <%= if feed.last_error do %>
+                    <p class="text-xs text-error mt-1">Error: {feed.last_error}</p>
+                  <% end %>
+                </div>
+                <div class="flex gap-1">
+                  <button phx-click="refresh_feed" phx-value-feed_id={feed.id} class="btn btn-xs btn-ghost gap-1 flex-shrink-0">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-3 w-3"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                    Refresh
+                  </button>
+                  <button
+                    phx-click="unsubscribe_feed"
+                    phx-value-feed_id={feed.id}
+                    class="btn btn-xs btn-ghost gap-1 text-error flex-shrink-0"
+                    title="Unsubscribe from this feed"
+                    data-confirm="Are you sure you want to unsubscribe from this feed?"
+                  >
+                    <.icon name="hero-trash" class="size-3" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="modal-action">
+      <.link navigate={~p"/app/feeds/new"} class="btn btn-primary gap-2">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 4v16m8-8H4"
+          />
+        </svg>
+        Add Feed
+      </.link>
+      <.link navigate={~p"/app/feeds"} class="btn gap-2">
+        View All
+      </.link>
+      <button phx-click="toggle_feed_modal" class="btn">Close</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" phx-click="toggle_feed_modal"></div>
+</div>
+
+<!-- Add Feed Modal -->
+<div class={if @show_add_feed_modal, do: "modal modal-open", else: "modal"}>
+  <div class="modal-box max-w-md">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-bold text-lg">Add Feed</h3>
+      <button phx-click="toggle_add_feed_modal" class="btn btn-sm btn-circle btn-ghost">
+        ✕
+      </button>
+    </div>
+
+    <form phx-submit="add_feed" class="space-y-4">
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text">Feed URL</span>
+        </label>
+        <input
+          type="url"
+          name="feed_url"
+          placeholder="https://example.com/feed.xml"
+          required
+          class="input input-bordered w-full"
+        />
+      </div>
+
+      <div class="flex gap-2 justify-end">
+        <button type="button" phx-click="toggle_add_feed_modal" class="btn btn-ghost">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary">
+          Add Feed
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div class="modal-backdrop" phx-click="toggle_add_feed_modal"></div>
+</div>
