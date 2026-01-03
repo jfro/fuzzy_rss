@@ -244,7 +244,7 @@ defmodule FuzzyRssWeb.ReaderLive.Reader do
       </div>
       
     <!-- Entry Detail Pane -->
-      <%= if @selected_entry do %>
+      <%= if @layout_mode == "horizontal" or @selected_entry do %>
         <.live_component
           module={FuzzyRssWeb.ReaderLive.EntryDetail}
           id="entry_detail"
