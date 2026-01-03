@@ -1,0 +1,34 @@
+skip_ci = "[skip ci]"
+skip_untracked = false
+from_latest_tag = true
+ignore_merge_commits = true
+tag_prefix = "v"
+disable_bump_commit = true
+
+pre_bump_hooks = [
+    ".cog/bump_version.sh {{version}}"
+]
+
+post_bump_hooks = [
+    "git add CHANGELOG.md",
+    "git commit -m 'chore: bump version to {{version}}'",
+    # Re-tag release commit to ensure a signed tag
+    "git tag {{version_tag}} --force --sign --annotate --message='Release {{version}}'"
+]
+
+[git_hooks]
+
+[commit_types]
+chore = { changelog_title = "", omit_from_changelog = true }
+
+[changelog]
+remote = "github.com"
+owner = "jfro"
+repository = "fuzzy_rss"
+authors = [
+    { username = "jfro", signature = "Jeremy Knope" }
+]
+
+[bump_profiles]
+
+[packages]
