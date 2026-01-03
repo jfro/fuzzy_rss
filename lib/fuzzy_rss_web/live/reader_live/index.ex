@@ -116,6 +116,42 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
   end
 
   @impl true
+  def handle_event("select_entry", %{"entry_id" => entry_id}, socket) do
+    entry_id = String.to_integer(entry_id)
+    entry = Enum.find(socket.assigns.entries, &(&1.id == entry_id))
+
+    socket =
+      if entry do
+        # Mark as read in database
+        Content.mark_as_read(socket.assigns.current_user, entry_id)
+
+        # Fetch updated entry state to show read status in list
+        state = Content.get_entry_state(socket.assigns.current_user, entry_id)
+
+        updated_entry =
+          if state do
+            Map.put(entry, :user_entry_states, [state])
+          else
+            Map.put(entry, :user_entry_states, [])
+          end
+
+        # Update the entry in the entries list to reflect read state
+        entries =
+          Enum.map(socket.assigns.entries, fn e ->
+            if e.id == entry_id, do: updated_entry, else: e
+          end)
+
+        socket
+        |> assign(:entries, entries)
+        |> assign(:selected_entry, updated_entry)
+      else
+        assign(socket, :selected_entry, entry)
+      end
+
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_event("toggle_folder", %{"folder_id" => folder_id}, socket) do
     folder_id = String.to_integer(folder_id)
     expanded = socket.assigns.expanded_folders

@@ -27,95 +27,6 @@ defmodule FuzzyRssWeb.ReaderLive.Reader do
     {:noreply, socket}
   end
 
-  @impl true
-  def handle_event("toggle_starred", %{"entry_id" => entry_id}, socket) do
-    entry_id = String.to_integer(entry_id)
-    Content.toggle_starred(socket.assigns.current_user, entry_id)
-
-    # Fetch fresh entry data with updated starred state
-    fresh_entry = Content.get_entry!(entry_id) |> FuzzyRss.Repo.preload(:feed)
-    state = Content.get_entry_state(socket.assigns.current_user, entry_id)
-
-    fresh_entry =
-      if state do
-        Map.put(fresh_entry, :user_entry_states, [state])
-      else
-        Map.put(fresh_entry, :user_entry_states, [])
-      end
-
-    # Update the entry in the entries list to keep data in sync
-    entries =
-      Enum.map(socket.assigns.entries, fn e ->
-        if e.id == entry_id, do: fresh_entry, else: e
-      end)
-
-    socket = assign(socket, :entries, entries)
-
-    # Update selected_entry to the fresh version
-    selected_entry =
-      if socket.assigns.selected_entry && socket.assigns.selected_entry.id == entry_id,
-        do: fresh_entry,
-        else: socket.assigns.selected_entry
-
-    {:noreply, assign(socket, :selected_entry, selected_entry)}
-  end
-
-  @impl true
-  def handle_event("mark_all_read", _params, socket) do
-    opts = [feed_id: socket.assigns.selected_feed, folder_id: socket.assigns.selected_folder]
-    Content.mark_all_as_read(socket.assigns.current_user, opts)
-    send(self(), :reload_entries)
-    {:noreply, socket}
-  end
-
-  @impl true
-  def handle_event("toggle_feed_filter", _params, socket) do
-    # Only allow toggling when viewing a specific feed or folder
-    if socket.assigns.selected_feed || socket.assigns.selected_folder do
-      new_filter = if socket.assigns.filter == :unread, do: :all, else: :unread
-      send(self(), {:filter_changed, new_filter})
-      {:noreply, socket}
-    else
-      {:noreply, socket}
-    end
-  end
-
-  @impl true
-  def handle_event("select_entry", %{"entry_id" => entry_id}, socket) do
-    entry_id = String.to_integer(entry_id)
-    entry = Enum.find(socket.assigns.entries, &(&1.id == entry_id))
-
-    socket =
-      if entry do
-        # Mark as read in database
-        Content.mark_as_read(socket.assigns.current_user, entry_id)
-
-        # Fetch updated entry state to show read status in list
-        state = Content.get_entry_state(socket.assigns.current_user, entry_id)
-
-        updated_entry =
-          if state do
-            Map.put(entry, :user_entry_states, [state])
-          else
-            Map.put(entry, :user_entry_states, [])
-          end
-
-        # Update the entry in the entries list to reflect read state
-        entries =
-          Enum.map(socket.assigns.entries, fn e ->
-            if e.id == entry_id, do: updated_entry, else: e
-          end)
-
-        socket
-        |> assign(:entries, entries)
-        |> assign(:selected_entry, updated_entry)
-      else
-        assign(socket, :selected_entry, entry)
-      end
-
-    {:noreply, socket}
-  end
-
   defp is_read?(entry) do
     Enum.any?(entry.user_entry_states, & &1.read)
   end
@@ -186,14 +97,13 @@ defmodule FuzzyRssWeb.ReaderLive.Reader do
             <%= if @selected_feed || @selected_folder do %>
               <button
                 phx-click="toggle_feed_filter"
-                phx-target={@myself}
                 class="btn btn-sm btn-ghost bg-base-300/50 hover:bg-base-300 gap-2"
                 title="Toggle between unread and all articles"
               >
                 {if @filter == :unread, do: "📖 Unread", else: "📋 All"}
               </button>
             <% end %>
-            <button phx-click="mark_all_read" phx-target={@myself} class="btn btn-sm btn-ghost gap-2">
+            <button phx-click="mark_all_read" class="btn btn-sm btn-ghost gap-2">
               <.icon name="hero-check" class="h-4 w-4" /> Mark All Read
             </button>
           </div>
@@ -214,7 +124,6 @@ defmodule FuzzyRssWeb.ReaderLive.Reader do
               <div
                 phx-click="select_entry"
                 phx-value-entry_id={entry.id}
-                phx-target={@myself}
                 class={"card card-compact bg-base-100 hover:bg-base-200 cursor-pointer transition-colors border-b border-base-300 rounded-none #{if @selected_entry && @selected_entry.id == entry.id, do: "bg-primary/20"} #{if read, do: "opacity-60"}"}
               >
                 <div class="card-body overflow-hidden">

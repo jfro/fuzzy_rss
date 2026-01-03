@@ -280,5 +280,42 @@ defmodule FuzzyRssWeb.ReaderLiveTest do
       updated_user = FuzzyRss.Accounts.get_user!(user.id)
       assert updated_user.preferences["layout_mode"] == "horizontal"
     end
+
+    test "switching layouts preserves selected entry", %{conn: conn, user: user} do
+      # Create test data using fixtures
+      feed = ContentFixtures.feed_fixture(%{"title" => "Test Feed"})
+      ContentFixtures.subscription_fixture(user, feed)
+
+      entry =
+        ContentFixtures.entry_fixture(feed, %{
+          "title" => "Test Entry to Preserve",
+          "summary" => "Test summary",
+          "content" => "Test content"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/app")
+
+      # Select an entry in vertical layout
+      view |> element("[phx-value-entry_id=\"#{entry.id}\"]") |> render_click()
+
+      # Verify entry is displayed
+      assert has_element?(view, "h1", "Test Entry to Preserve")
+
+      # Switch to horizontal layout
+      view
+      |> element("button[title=\"Horizontal layout (sidebar, list, and article side-by-side)\"]")
+      |> render_click()
+
+      # Entry should still be displayed in the right pane
+      assert has_element?(view, "h1", "Test Entry to Preserve")
+
+      # Switch back to vertical layout
+      view
+      |> element("button[title=\"Vertical layout (list on top, article below)\"]")
+      |> render_click()
+
+      # Entry should still be displayed in the bottom pane
+      assert has_element?(view, "h1", "Test Entry to Preserve")
+    end
   end
 end
