@@ -1,0 +1,21 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: fuzzyrss-sqlite-app
+    ports:
+      - "4000:4000"
+    environment:
+      DATABASE_ADAPTER: sqlite
+      DATABASE_URL: /app/data/fuzzy_rss.db
+      SECRET_KEY_BASE: uYCtaRnHv8guzrfpWoLxGwnMj29yqhM/t3WENB3IRzgMNRnPFP/LumaChLVv2JIB
+      PHX_HOST: localhost
+      PORT: 4000
+      DISABLE_MAGIC_LINK: true
+    volumes:
+      - sqlite_data:/app/data
+    command: sh -c "/app/bin/migrate && /app/bin/server"
+
+volumes:
+  sqlite_data:
