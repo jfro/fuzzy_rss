@@ -155,10 +155,31 @@ if config_env() == :prod do
   host = System.get_env("PHX_HOST") || "example.com"
   port = String.to_integer(System.get_env("PORT") || "4000")
 
+  # URL configuration for generating absolute URLs
+  # When behind a TLS-terminating proxy (nginx, Caddy, Traefik, etc.):
+  # - The proxy handles HTTPS on port 443
+  # - The proxy forwards to this app on HTTP (PORT, typically 4000)
+  # - Set PHX_HOST to your domain
+  # - PHX_URL_SCHEME defaults to "https"
+  # - PHX_URL_PORT defaults to 443 (standard HTTPS port, omitted in URLs)
+  url_scheme = System.get_env("PHX_URL_SCHEME", "https")
+  url_port = String.to_integer(System.get_env("PHX_URL_PORT", "443"))
+
+  # Check origin configuration for WebSocket connections
+  # Set to false to allow any origin (use with caution)
+  # Or set CHECK_ORIGIN to a comma-separated list of allowed origins
+  check_origin =
+    case System.get_env("CHECK_ORIGIN") do
+      "false" -> false
+      nil -> ["//#{host}"]
+      origins -> String.split(origins, ",") |> Enum.map(&String.trim/1)
+    end
+
   config :fuzzy_rss, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
   config :fuzzy_rss, FuzzyRssWeb.Endpoint,
-    url: [host: host, port: 443, scheme: "https"],
+    url: [host: host, port: url_port, scheme: url_scheme],
+    check_origin: check_origin,
     http: [
       # Enable IPv6 and bind on all interfaces.
       # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
@@ -204,20 +225,128 @@ if config_env() == :prod do
   # ## Configuring the mailer
   #
   # In production you need to configure the mailer to use a different adapter.
-  # Here is an example configuration for Mailgun:
-  #
-  #     config :fuzzy_rss, FuzzyRss.Mailer,
-  #       adapter: Swoosh.Adapters.Mailgun,
-  #       api_key: System.get_env("MAILGUN_API_KEY"),
-  #       domain: System.get_env("MAILGUN_DOMAIN")
-  #
-  # Most non-SMTP adapters require an API client. Swoosh supports Req, Hackney,
-  # and Finch out-of-the-box. This configuration is typically done at
-  # compile-time in your config/prod.exs:
-  #
-  #     config :swoosh, :api_client, Swoosh.ApiClient.Req
-  #
-  # See https://hexdocs.pm/swoosh/Swoosh.html#module-installation for details.
+  # Swoosh can be configured via environment variables for different mail providers.
+  mailer_adapter = System.get_env("MAIL_ADAPTER", "local") |> String.downcase()
+
+  mailer_config =
+    case mailer_adapter do
+      "smtp" ->
+        # SMTP Configuration
+        # Required: MAIL_SMTP_RELAY, MAIL_SMTP_USERNAME, MAIL_SMTP_PASSWORD
+        # Optional: MAIL_SMTP_PORT (default: 587), MAIL_SMTP_TLS (default: always)
+        base_smtp_config = [
+          adapter: Swoosh.Adapters.SMTP,
+          relay:
+            System.get_env("MAIL_SMTP_RELAY") ||
+              raise("MAIL_SMTP_RELAY is required for SMTP adapter"),
+          username:
+            System.get_env("MAIL_SMTP_USERNAME") ||
+              raise("MAIL_SMTP_USERNAME is required for SMTP adapter"),
+          password:
+            System.get_env("MAIL_SMTP_PASSWORD") ||
+              raise("MAIL_SMTP_PASSWORD is required for SMTP adapter"),
+          port: String.to_integer(System.get_env("MAIL_SMTP_PORT", "587")),
+          tls: String.to_existing_atom(System.get_env("MAIL_SMTP_TLS", "always")),
+          retries: String.to_integer(System.get_env("MAIL_SMTP_RETRIES", "1")),
+          no_mx_lookups: System.get_env("MAIL_SMTP_NO_MX_LOOKUPS", "false") == "true"
+        ]
+
+        # Add optional SSL setting
+        smtp_config_with_ssl =
+          case System.get_env("MAIL_SMTP_SSL") do
+            "true" -> Keyword.put(base_smtp_config, :ssl, true)
+            "false" -> Keyword.put(base_smtp_config, :ssl, false)
+            _ -> base_smtp_config
+          end
+
+        # Add optional auth setting
+        case System.get_env("MAIL_SMTP_AUTH") do
+          nil ->
+            smtp_config_with_ssl
+
+          auth when auth in ["always", "never", "if_available"] ->
+            Keyword.put(smtp_config_with_ssl, :auth, String.to_existing_atom(auth))
+
+          _ ->
+            smtp_config_with_ssl
+        end
+
+      "mailgun" ->
+        # Mailgun Configuration
+        # Required: MAIL_MAILGUN_API_KEY, MAIL_MAILGUN_DOMAIN
+        # Optional: MAIL_MAILGUN_BASE_URL (for EU region)
+        base_mailgun_config = [
+          adapter: Swoosh.Adapters.Mailgun,
+          api_key:
+            System.get_env("MAIL_MAILGUN_API_KEY") ||
+              raise("MAIL_MAILGUN_API_KEY is required for Mailgun adapter"),
+          domain:
+            System.get_env("MAIL_MAILGUN_DOMAIN") ||
+              raise("MAIL_MAILGUN_DOMAIN is required for Mailgun adapter")
+        ]
+
+        # Add optional base URL for EU region
+        case System.get_env("MAIL_MAILGUN_BASE_URL") do
+          nil -> base_mailgun_config
+          url -> Keyword.put(base_mailgun_config, :base_url, url)
+        end
+
+      "sendgrid" ->
+        # SendGrid Configuration
+        # Required: MAIL_SENDGRID_API_KEY
+        [
+          adapter: Swoosh.Adapters.Sendgrid,
+          api_key:
+            System.get_env("MAIL_SENDGRID_API_KEY") ||
+              raise("MAIL_SENDGRID_API_KEY is required for SendGrid adapter")
+        ]
+
+      "postmark" ->
+        # Postmark Configuration
+        # Required: MAIL_POSTMARK_API_KEY
+        [
+          adapter: Swoosh.Adapters.Postmark,
+          api_key:
+            System.get_env("MAIL_POSTMARK_API_KEY") ||
+              raise("MAIL_POSTMARK_API_KEY is required for Postmark adapter")
+        ]
+
+      "gmail" ->
+        # Gmail API Configuration
+        # Required: MAIL_GMAIL_ACCESS_TOKEN
+        # Note: This uses Gmail API, not SMTP. For SMTP, use the "smtp" adapter.
+        [
+          adapter: Swoosh.Adapters.Gmail,
+          access_token:
+            System.get_env("MAIL_GMAIL_ACCESS_TOKEN") ||
+              raise("MAIL_GMAIL_ACCESS_TOKEN is required for Gmail adapter")
+        ]
+
+      "local" ->
+        # Local adapter for development (emails visible at /dev/mailbox)
+        [adapter: Swoosh.Adapters.Local]
+
+      other ->
+        raise """
+        Invalid MAIL_ADAPTER: #{inspect(other)}
+
+        Supported values are: smtp, mailgun, sendgrid, postmark, gmail, local
+
+        Set the MAIL_ADAPTER environment variable to one of the supported values.
+        Examples:
+          MAIL_ADAPTER=smtp MAIL_SMTP_RELAY=smtp.example.com ...
+          MAIL_ADAPTER=sendgrid MAIL_SENDGRID_API_KEY=SG.xxxxx ...
+          MAIL_ADAPTER=postmark MAIL_POSTMARK_API_KEY=xxxxx ...
+          MAIL_ADAPTER=gmail MAIL_GMAIL_ACCESS_TOKEN=xxxxx ...
+        """
+    end
+
+  config :fuzzy_rss, FuzzyRss.Mailer, mailer_config
+
+  # Configure Swoosh API client for non-SMTP adapters (uses Req by default)
+  if mailer_adapter in ["mailgun", "sendgrid", "postmark", "gmail"] do
+    config :swoosh, :api_client, Swoosh.ApiClient.Req
+  end
 end
 
 # Authentication configuration (read at runtime from environment variables)

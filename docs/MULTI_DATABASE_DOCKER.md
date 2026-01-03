@@ -59,11 +59,9 @@ docker build -t fuzzyrss:latest .
 Create `docker-compose.yml`:
 
 ```yaml
-version: '3.8'
-
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: fuzzyrss-db
     environment:
       POSTGRES_USER: postgres
@@ -106,17 +104,15 @@ Run:
 docker-compose up
 ```
 
-### MySQL
+### MariaDB
 
-Create `docker-compose.mysql.yml`:
+Create `docker-compose.mariadb.yml`:
 
 ```yaml
-version: '3.8'
-
 services:
   db:
-    image: mysql:8-alpine
-    container_name: fuzzyrss-mysql
+    image: mariadb:alpine
+    container_name: fuzzyrss-mariadb
     environment:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: fuzzy_rss
@@ -125,9 +121,9 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - mariadb_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -148,13 +144,13 @@ services:
         condition: service_healthy
 
 volumes:
-  mysql_data:
+  mariadb_data:
 ```
 
 Run:
 
 ```bash
-docker-compose -f docker-compose.mysql.yml up
+docker-compose -f docker-compose.mariadb.yml up
 ```
 
 ### SQLite
@@ -162,8 +158,6 @@ docker-compose -f docker-compose.mysql.yml up
 Create `docker-compose.sqlite.yml`:
 
 ```yaml
-version: '3.8'
-
 services:
   app:
     build: .
@@ -290,13 +284,14 @@ environment:
   POSTGRES_HOST_AUTH_METHOD: "md5"
 ```
 
-### MySQL
+### MariaDB
 
 **Advantages:**
 - Good FULLTEXT search
 - Wide hosting support
 - Good for moderate scale
 - Familiar to many teams
+- Drop-in MySQL replacement
 
 **Limitations:**
 - FULLTEXT limitations compared to PostgreSQL
@@ -443,14 +438,14 @@ docker exec fuzzyrss-db pg_dump -U postgres fuzzy_rss > backup.sql
 docker exec -i fuzzyrss-db psql -U postgres fuzzy_rss < backup.sql
 ```
 
-### MySQL
+### MariaDB
 
 ```bash
 # Backup
-docker exec fuzzyrss-db mysqldump -u fuzzy_rss -ppassword fuzzy_rss > backup.sql
+docker exec fuzzyrss-mariadb mysqldump -u fuzzy_rss -ppassword fuzzy_rss > backup.sql
 
 # Restore
-docker exec -i fuzzyrss-db mysql -u fuzzy_rss -ppassword fuzzy_rss < backup.sql
+docker exec -i fuzzyrss-mariadb mysql -u fuzzy_rss -ppassword fuzzy_rss < backup.sql
 ```
 
 ### SQLite
@@ -481,7 +476,7 @@ VACUUM ANALYZE;
 REINDEX DATABASE fuzzy_rss;
 ```
 
-MySQL:
+MariaDB:
 
 ```sql
 OPTIMIZE TABLE feeds, entries, subscriptions;

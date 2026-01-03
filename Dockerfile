@@ -87,6 +87,7 @@ RUN chown nobody /app && mkdir -p /app/data && chown nobody /app/data
 
 # set runner ENV
 ENV MIX_ENV="prod"
+ENV PHX_SERVER="true"
 
 # Only copy the final release from the build stage
 COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/fuzzy_rss ./

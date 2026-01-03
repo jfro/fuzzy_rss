@@ -1,14 +1,14 @@
 services:
   db:
-    image: mariadb:12
-    container_name: fuzzyrss-mysql-db
+    image: mariadb:alpine
+    container_name: fuzzyrss-mariadb-db
     environment:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: fuzzy_rss
       MYSQL_USER: fuzzy_rss
       MYSQL_PASSWORD: password
     volumes:
-      - mysql_data:/var/lib/mysql
+      - mariadb_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       start_period: 10s
@@ -20,7 +20,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    container_name: fuzzyrss-mysql-app
+    container_name: fuzzyrss-mariadb-app
     ports:
       - "4000:4000"
     environment:
@@ -36,4 +36,4 @@ services:
     command: sh -c "/app/bin/migrate && /app/bin/server"
 
 volumes:
-  mysql_data:
+  mariadb_data:
