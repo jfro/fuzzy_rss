@@ -203,16 +203,16 @@ defmodule FuzzyRssWeb.ReaderLive.Reader do
           <% end %>
         <% end %>
       </div>
-    </div>
-
+      
     <!-- Entry Detail -->
-    <%= if @selected_entry do %>
-      <.live_component
-        module={FuzzyRssWeb.ReaderLive.EntryDetail}
-        id="entry_detail"
-        selected_entry={@selected_entry}
-      />
-    <% end %>
+      <%= if @selected_entry do %>
+        <.live_component
+          module={FuzzyRssWeb.ReaderLive.EntryDetail}
+          id="entry_detail"
+          selected_entry={@selected_entry}
+        />
+      <% end %>
+    </div>
     """
   end
 end
