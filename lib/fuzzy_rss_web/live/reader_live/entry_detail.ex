@@ -3,7 +3,11 @@ defmodule FuzzyRssWeb.ReaderLive.EntryDetail do
 
   @impl true
   def update(assigns, socket) do
-    socket = assign(socket, :layout_mode, assigns[:layout_mode] || "vertical")
+    socket =
+      socket
+      |> assign(:selected_entry, assigns.selected_entry)
+      |> assign(:layout_mode, assigns[:layout_mode] || "vertical")
+
     {:ok, socket}
   end
 
@@ -16,10 +20,10 @@ defmodule FuzzyRssWeb.ReaderLive.EntryDetail do
     assigns = assign(assigns, :is_starred, is_starred?(assigns.selected_entry))
 
     ~H"""
-    <article
-      :if={assigns[:layout_mode] != "horizontal"}
-      class="flex-1 bg-base-100 overflow-y-auto border-l border-base-300 min-w-0 hidden lg:block"
-    >
+    <article class={[
+      "flex-1 bg-base-100 overflow-y-auto border-l border-base-300 min-w-0",
+      if(assigns[:layout_mode] == "horizontal", do: "hidden", else: "block")
+    ]}>
       <div class="p-6">
         <div class="mb-6">
           <h1 class="text-3xl font-bold mb-3">{@selected_entry.title}</h1>

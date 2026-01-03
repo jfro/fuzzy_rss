@@ -249,6 +249,7 @@ defmodule FuzzyRssWeb.ReaderLive.Reader do
           module={FuzzyRssWeb.ReaderLive.EntryDetail}
           id="entry_detail"
           selected_entry={@selected_entry}
+          layout_mode={@layout_mode}
         />
       <% end %>
     </div>

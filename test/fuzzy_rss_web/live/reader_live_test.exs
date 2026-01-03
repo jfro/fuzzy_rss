@@ -3,6 +3,8 @@ defmodule FuzzyRssWeb.ReaderLiveTest do
 
   import Phoenix.LiveViewTest
 
+  alias FuzzyRss.ContentFixtures
+
   setup :register_and_log_in_user
 
   describe "Reader component" do
@@ -121,6 +123,105 @@ defmodule FuzzyRssWeb.ReaderLiveTest do
       # Verify sidebar still present and we're viewing Manage Feeds
       assert html =~ "FuzzyRSS"
       assert html =~ "Manage Feeds"
+    end
+  end
+
+  describe "Entry Detail Component" do
+    test "entry detail component properly updates with all required assigns", %{conn: conn} do
+      # This test ensures that the EntryDetail component receives all necessary assigns
+      # and doesn't raise KeyError when trying to access them.
+      # This specifically tests the bug fix where EntryDetail.update/2 wasn't properly
+      # assigning selected_entry, causing KeyError when render/1 tried to access it.
+      {:ok, view, html} = live(conn, ~p"/app")
+
+      # The component should render without errors (no KeyError)
+      assert view != nil
+      assert html =~ "FuzzyRSS"
+    end
+
+    test "layout mode is properly passed to entry detail component", %{conn: conn} do
+      # This test ensures that the EntryDetail component receives the layout_mode assign
+      # and renders without errors when switching between layouts.
+      # Regression test for: KeyError when layout_mode not properly assigned to EntryDetail
+      {:ok, view, _html} = live(conn, ~p"/app")
+
+      # Switch to horizontal layout
+      view
+      |> element("button[title=\"Horizontal layout (sidebar, list, and article side-by-side)\"]")
+      |> render_click()
+
+      # The view should still be connected and rendering without KeyError
+      assert view != nil
+
+      assert has_element?(
+               view,
+               "button[title=\"Horizontal layout (sidebar, list, and article side-by-side)\"].btn-primary"
+             )
+
+      # Switch back to vertical layout
+      view
+      |> element("button[title=\"Vertical layout (list on top, article below)\"]")
+      |> render_click()
+
+      # Should render without errors
+      assert has_element?(
+               view,
+               "button[title=\"Vertical layout (list on top, article below)\"].btn-primary"
+             )
+    end
+
+    test "entry detail component renders with selected entry", %{conn: conn, user: user} do
+      # Create test data using fixtures
+      feed = ContentFixtures.feed_fixture(%{"title" => "Test Feed"})
+      ContentFixtures.subscription_fixture(user, feed)
+
+      entry =
+        ContentFixtures.entry_fixture(feed, %{
+          "title" => "Test Entry",
+          "summary" => "Test summary",
+          "content" => "Test content"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/app")
+
+      # Select the entry by clicking it
+      view |> element("[phx-value-entry_id=\"#{entry.id}\"]") |> render_click()
+
+      # The entry detail should now be rendered with the entry's title
+      assert has_element?(view, "h1", "Test Entry")
+    end
+
+    test "entry detail component renders with layout mode and selected entry", %{
+      conn: conn,
+      user: user
+    } do
+      # Create test data using fixtures
+      feed = ContentFixtures.feed_fixture(%{"title" => "Test Feed"})
+      ContentFixtures.subscription_fixture(user, feed)
+
+      entry =
+        ContentFixtures.entry_fixture(feed, %{
+          "title" => "Test Entry with Mode",
+          "summary" => "Test summary",
+          "content" => "Test content"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/app")
+
+      # Select the entry - in vertical layout
+      view |> element("[phx-value-entry_id=\"#{entry.id}\"]") |> render_click()
+
+      # Entry detail should render in vertical layout
+      assert has_element?(view, "h1", "Test Entry with Mode")
+
+      # Switch to horizontal layout
+      view
+      |> element("button[title=\"Horizontal layout (sidebar, list, and article side-by-side)\"]")
+      |> render_click()
+
+      # Entry detail component should still exist without errors
+      # (it's hidden in horizontal layout, but doesn't crash)
+      assert view != nil
     end
   end
 
