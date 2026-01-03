@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.1.2 - 2026-01-03
+#### Continuous Integration
+- fix wrong arm64 runner name - (23365cb) - *jfro*
+
+- - -
+
 ## v0.1.1 - 2026-01-03
 #### Bug Fixes
 - mysql error due to conflict handling differences - (8b346aa) - *jfro*
