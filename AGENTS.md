@@ -12,6 +12,13 @@ This is a web application written using the Phoenix web framework.
   - `config/runtime.exs` is evaluated at **startup time** - environment variables are properly read
   - Example: Use `System.get_env("MY_VAR", "default")` in `runtime.exs`, NOT in `config.exs`
 
+### Terminal/Bash guidelines
+
+- **NEVER use `cd` commands in Bash tool calls**. Always use the `workdir` parameter instead
+- Keep Bash commands lean and focused - no unnecessary directory operations
+- Stay in the project's current working directory (CWD) unless you have a specific reason to work elsewhere
+- Example: Use `workdir="/some/other/dir"` with the command, NOT `cd /some/other/dir && command`
+
 ### Phoenix v1.8 guidelines
 
 - **Always** begin your LiveView templates with `<Layouts.app flash={@flash} ...>` which wraps all inner content
