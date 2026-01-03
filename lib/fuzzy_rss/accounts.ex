@@ -8,6 +8,53 @@ defmodule FuzzyRss.Accounts do
 
   defp repo, do: Application.fetch_env!(:fuzzy_rss, :repo_module)
 
+  ## Authentication configuration helpers
+
+  @doc """
+  Returns whether magic link authentication is enabled.
+
+  When disabled, password-based authentication is required instead.
+  Controlled by the DISABLE_MAGIC_LINK environment variable.
+  """
+  def magic_link_enabled? do
+    not Application.get_env(:fuzzy_rss, :auth)[:disable_magic_link]
+  end
+
+  @doc """
+  Returns whether email confirmation is required.
+
+  Opposite of magic_link_enabled?/0 - when magic links are disabled,
+  email confirmation is not required since password auth is used instead.
+  """
+  def email_confirmation_required? do
+    magic_link_enabled?()
+  end
+
+  @doc """
+  Returns whether signup is allowed.
+
+  Checks the SIGNUP_ENABLED configuration:
+    - "true" → unlimited signups (default)
+    - "first_user_only" → only if no users exist in database
+    - "false" → no new signups allowed
+  """
+  def can_signup? do
+    signup_config = Application.get_env(:fuzzy_rss, :auth)[:signup_enabled]
+
+    case signup_config do
+      "false" -> false
+      "first_user_only" -> user_count() == 0
+      _ -> true
+    end
+  end
+
+  @doc """
+  Returns the count of users in the database.
+  """
+  defp user_count do
+    repo().aggregate(User, :count, :id)
+  end
+
   ## Database getters
 
   @doc """
@@ -65,9 +112,19 @@ defmodule FuzzyRss.Accounts do
   @doc """
   Registers a user.
 
+  When DISABLE_MAGIC_LINK is true (password-only mode):
+    - Password is required during registration
+    - User is immediately confirmed (confirmed_at is set)
+    - User can login immediately
+
+  When DISABLE_MAGIC_LINK is false (default magic link mode):
+    - Password is optional
+    - User receives confirmation email with magic link
+    - User must click magic link to be confirmed
+
   ## Examples
 
-      iex> register_user(%{field: value})
+      iex> register_user(%{email: "user@example.com", password: "securepass123"})
       {:ok, %User{}}
 
       iex> register_user(%{field: bad_value})
@@ -76,8 +133,19 @@ defmodule FuzzyRss.Accounts do
   """
   def register_user(attrs) do
     %User{}
-    |> User.email_changeset(attrs)
+    |> User.registration_changeset(attrs)
+    |> maybe_confirm_user()
     |> repo().insert()
+  end
+
+  defp maybe_confirm_user(changeset) do
+    # In password mode (magic link disabled), confirm user immediately
+    if email_confirmation_required?() do
+      changeset
+    else
+      now = DateTime.utc_now(:second)
+      Ecto.Changeset.put_change(changeset, :confirmed_at, now)
+    end
   end
 
   ## Settings

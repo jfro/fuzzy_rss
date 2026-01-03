@@ -21,6 +21,44 @@ defmodule FuzzyRss.Accounts.User do
   end
 
   @doc """
+  A user changeset for registration.
+
+  Handles both magic link and password-based registration modes.
+
+  In magic link mode (default, DISABLE_MAGIC_LINK=false):
+    - Email is required
+    - Password is optional
+    - User will receive confirmation email
+
+  In password mode (DISABLE_MAGIC_LINK=true):
+    - Email is required
+    - Password is required (min 12 chars)
+    - No confirmation email sent, user confirmed immediately
+
+  ## Options
+
+    * `:validate_unique` - Set to false if you don't want to validate uniqueness
+      of the email, useful when displaying live validations. Defaults to `true`.
+  """
+  def registration_changeset(user, attrs, opts \\ []) do
+    user
+    |> cast(attrs, [:email, :password])
+    |> validate_required([:email])
+    |> update_change(:email, &String.downcase/1)
+    |> validate_email(opts)
+    |> validate_password_if_required()
+  end
+
+  defp validate_password_if_required(changeset) do
+    # Password required only if magic link is disabled (password-only mode)
+    if not FuzzyRss.Accounts.magic_link_enabled?() do
+      validate_password(changeset, [])
+    else
+      changeset
+    end
+  end
+
+  @doc """
   A user changeset for registering or changing the email.
 
   It requires the email to change otherwise an error is added.

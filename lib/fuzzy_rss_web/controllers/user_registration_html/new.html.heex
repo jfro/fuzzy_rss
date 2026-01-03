@@ -23,6 +23,16 @@
         phx-mounted={JS.focus()}
       />
 
+      <%= if not FuzzyRss.Accounts.magic_link_enabled?() do %>
+        <.input
+          field={f[:password]}
+          type="password"
+          label="Password"
+          autocomplete="new-password"
+          required
+        />
+      <% end %>
+
       <.button phx-disable-with="Creating account..." class="btn btn-primary w-full">
         Create an account
       </.button>

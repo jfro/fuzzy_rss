@@ -97,6 +97,14 @@ config :ueberauth, Ueberauth.Strategy.OIDC,
 # Enable OIDC (optional, can be disabled)
 config :fuzzy_rss, :oidc_enabled, System.get_env("OIDC_ENABLED", "false") == "true"
 
+# Authentication configuration
+# DISABLE_MAGIC_LINK: Set to "true" to disable magic link auth and require password-based auth
+# SIGNUP_ENABLED: Set to "first_user_only" to allow signup only if no users exist,
+#                 "false" to disable all signups, or "true" for unlimited signups (default)
+config :fuzzy_rss, :auth,
+  disable_magic_link: System.get_env("DISABLE_MAGIC_LINK", "false") == "true",
+  signup_enabled: System.get_env("SIGNUP_ENABLED", "true")
+
 # Configure Oban for background job processing
 # Note: The repo and engine are configured in runtime.exs based on DATABASE_ADAPTER
 config :fuzzy_rss, Oban,

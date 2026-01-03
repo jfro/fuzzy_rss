@@ -198,4 +198,150 @@ defmodule FuzzyRssWeb.UserSessionControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Logged out successfully"
     end
   end
+
+  describe "Password mode (magic link disabled)" do
+    @tag :capture_log
+    test "rejects magic link tokens when magic link is disabled", %{conn: conn, user: user} do
+      original_config = Application.get_env(:fuzzy_rss, :auth)
+
+      try do
+        Application.put_env(:fuzzy_rss, :auth, signup_enabled: "true", disable_magic_link: true)
+
+        {token, _hashed_token} = generate_user_magic_link_token(user)
+
+        conn =
+          post(conn, ~p"/users/log-in", %{
+            "user" => %{"token" => token}
+          })
+
+        assert redirected_to(conn) == ~p"/users/log-in"
+
+        assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+                 "Magic link login is not available"
+      after
+        Application.put_env(:fuzzy_rss, :auth, original_config)
+      end
+    end
+
+    test "rejects magic link confirm page when magic link is disabled", %{
+      conn: conn,
+      unconfirmed_user: user
+    } do
+      original_config = Application.get_env(:fuzzy_rss, :auth)
+
+      try do
+        Application.put_env(:fuzzy_rss, :auth, signup_enabled: "true", disable_magic_link: true)
+
+        token =
+          extract_user_token(fn url ->
+            Accounts.deliver_login_instructions(user, url)
+          end)
+
+        conn = get(conn, ~p"/users/log-in/#{token}")
+        assert redirected_to(conn) == ~p"/users/log-in"
+
+        assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+                 "Magic link login is not available"
+      after
+        Application.put_env(:fuzzy_rss, :auth, original_config)
+      end
+    end
+
+    test "password field is shown when magic link is disabled", %{conn: conn} do
+      original_config = Application.get_env(:fuzzy_rss, :auth)
+
+      try do
+        Application.put_env(:fuzzy_rss, :auth, signup_enabled: "true", disable_magic_link: true)
+
+        conn = get(conn, ~p"/users/log-in")
+        response = html_response(conn, 200)
+        # Should show password form, not magic link form
+        refute response =~ "Log in with email"
+        assert response =~ "type=\"password\""
+      after
+        Application.put_env(:fuzzy_rss, :auth, original_config)
+      end
+    end
+
+    test "email and password login works when magic link is disabled", %{conn: conn, user: user} do
+      original_config = Application.get_env(:fuzzy_rss, :auth)
+
+      try do
+        Application.put_env(:fuzzy_rss, :auth, signup_enabled: "true", disable_magic_link: true)
+
+        user = set_password(user)
+
+        conn =
+          post(conn, ~p"/users/log-in", %{
+            "user" => %{"email" => user.email, "password" => valid_user_password()}
+          })
+
+        assert get_session(conn, :user_token)
+        assert redirected_to(conn) == ~p"/app"
+      after
+        Application.put_env(:fuzzy_rss, :auth, original_config)
+      end
+    end
+
+    test "magic link email request is rejected when magic link is disabled", %{
+      conn: conn,
+      user: user
+    } do
+      original_config = Application.get_env(:fuzzy_rss, :auth)
+
+      try do
+        Application.put_env(:fuzzy_rss, :auth, signup_enabled: "true", disable_magic_link: true)
+
+        conn =
+          post(conn, ~p"/users/log-in", %{
+            "user" => %{"email" => user.email}
+          })
+
+        assert redirected_to(conn) == ~p"/users/log-in"
+
+        assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+                 "Please enter your email and password"
+      after
+        Application.put_env(:fuzzy_rss, :auth, original_config)
+      end
+    end
+  end
+
+  describe "Magic link mode (default)" do
+    test "magic link forms are shown when magic link is enabled", %{conn: conn} do
+      original_config = Application.get_env(:fuzzy_rss, :auth)
+
+      try do
+        Application.put_env(:fuzzy_rss, :auth, signup_enabled: "true", disable_magic_link: false)
+
+        conn = get(conn, ~p"/users/log-in")
+        response = html_response(conn, 200)
+        # Should show both magic link and password forms
+        assert response =~ "Log in with email"
+        assert response =~ "type=\"password\""
+      after
+        Application.put_env(:fuzzy_rss, :auth, original_config)
+      end
+    end
+
+    test "magic link tokens work when magic link is enabled", %{conn: conn, user: user} do
+      original_config = Application.get_env(:fuzzy_rss, :auth)
+
+      try do
+        Application.put_env(:fuzzy_rss, :auth, signup_enabled: "true", disable_magic_link: false)
+
+        {token, _hashed_token} = generate_user_magic_link_token(user)
+
+        conn =
+          post(conn, ~p"/users/log-in", %{
+            "user" => %{"token" => token}
+          })
+
+        assert get_session(conn, :user_token)
+        assert redirected_to(conn) == ~p"/app"
+      after
+        Application.put_env(:fuzzy_rss, :auth, original_config)
+      end
+    end
+  end
 end
