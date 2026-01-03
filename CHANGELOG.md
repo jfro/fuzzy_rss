@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.1.3 - 2026-01-03
+#### Continuous Integration
+- fix changelog extraction for gh releases - (8783167) - *jfro*
+- fix a warning from github - (1fe4671) - *jfro*
+#### Refactoring
+- use assent for OIDC & properly expose env configuration to use - (6563de0) - *jfro*
+
+- - -
+
 ## v0.1.2 - 2026-01-03
 #### Continuous Integration
 - fix wrong arm64 runner name - (23365cb) - *jfro*
