@@ -55,7 +55,9 @@ jobs:
 
       - name: Get fresh build arguments
         shell: bash
-        run: echo -e "BUILD_TIME=$(date -u '+%Y-%m-%d_%H:%M:%S')\nGITREF=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        run: |
+          echo "BUILD_TIME=$(date -u '+%Y-%m-%d_%H:%M:%S')" >> $GITHUB_OUTPUT
+          echo "GITREF=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
         id: get_buildargs
 
       - name: Build and push by digest
