@@ -99,11 +99,11 @@ config :fuzzy_rss, :oidc_enabled, System.get_env("OIDC_ENABLED", "false") == "tr
 
 # Authentication configuration
 # DISABLE_MAGIC_LINK: Set to "true" to disable magic link auth and require password-based auth
-# SIGNUP_ENABLED: Set to "first_user_only" to allow signup only if no users exist,
-#                 "false" to disable all signups, or "true" for unlimited signups (default)
+# SIGNUP_ENABLED: Set to "true" to allow unlimited signups (default),
+#                 "false" to allow only the first user to signup (one-time registration)
 config :fuzzy_rss, :auth,
   disable_magic_link: System.get_env("DISABLE_MAGIC_LINK", "false") == "true",
-  signup_enabled: System.get_env("SIGNUP_ENABLED", "true")
+  signup_enabled: System.get_env("SIGNUP_ENABLED", "true") != "false"
 
 # Configure Oban for background job processing
 # Note: The repo and engine are configured in runtime.exs based on DATABASE_ADAPTER

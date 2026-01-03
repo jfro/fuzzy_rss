@@ -34,17 +34,18 @@ defmodule FuzzyRss.Accounts do
   Returns whether signup is allowed.
 
   Checks the SIGNUP_ENABLED configuration:
-    - "true" → unlimited signups (default)
-    - "first_user_only" → only if no users exist in database
-    - "false" → no new signups allowed
+    - true → unlimited signups (default)
+    - false → allow only the first user to signup (one-time registration)
   """
   def can_signup? do
-    signup_config = Application.get_env(:fuzzy_rss, :auth)[:signup_enabled]
+    signup_enabled = Application.get_env(:fuzzy_rss, :auth)[:signup_enabled]
 
-    case signup_config do
-      "false" -> false
-      "first_user_only" -> user_count() == 0
-      _ -> true
+    if signup_enabled do
+      # Unlimited signups
+      true
+    else
+      # First user only - check if any users exist
+      user_count() == 0
     end
   end
 
