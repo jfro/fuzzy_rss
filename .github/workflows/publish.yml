@@ -145,8 +145,8 @@ jobs:
           TAG=${{ github.ref_name }}
 
           # Extract the changelog section for this version
-          # Pattern: match "## vX.Y.Z" and capture until next "## v" or end of file
-          CHANGELOG=$(awk "/^## ${TAG//./\\.}[^0-9]/,/^## v[0-9]|^$/{if(/^## v[0-9]/) exit; print}" CHANGELOG.md | sed '$d')
+          # Pattern: match "## vX.Y.Z - date" and capture until the "- - -" separator
+          CHANGELOG=$(awk "/^## ${TAG//./\\.} /,/^- - -\$/{if(/^- - -\$/) exit; print}" CHANGELOG.md)
 
           # Handle multi-line output for GitHub Actions
           {
