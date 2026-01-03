@@ -83,7 +83,7 @@ ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
 WORKDIR "/app"
-RUN chown nobody /app
+RUN chown nobody /app && mkdir -p /app/data && chown nobody /app/data
 
 # set runner ENV
 ENV MIX_ENV="prod"

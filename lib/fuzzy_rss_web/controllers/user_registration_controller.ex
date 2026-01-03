@@ -10,7 +10,7 @@ defmodule FuzzyRssWeb.UserRegistrationController do
       |> put_flash(:error, "Signup is currently disabled.")
       |> redirect(to: ~p"/users/log-in")
     else
-      changeset = Accounts.change_user_email(%User{})
+      changeset = User.registration_changeset(%User{}, %{})
       render(conn, :new, changeset: changeset)
     end
   end

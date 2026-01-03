@@ -40,8 +40,12 @@ repo_module =
 # SQLite configuration (always available)
 sqlite_db_name =
   case config_env() do
-    :test -> "priv/fuzzy_rss_test#{System.get_env("MIX_TEST_PARTITION")}.db"
-    _ -> System.get_env("SQLITE_DATABASE_URL") || "priv/fuzzy_rss_dev.db"
+    :test ->
+      "priv/fuzzy_rss_test#{System.get_env("MIX_TEST_PARTITION")}.db"
+
+    _ ->
+      System.get_env("SQLITE_DATABASE_URL") || System.get_env("DATABASE_URL") ||
+        "priv/fuzzy_rss_dev.db"
   end
 
 sqlite_config = [
@@ -59,6 +63,7 @@ mysql_db_suffix =
 
 mysql_url =
   System.get_env("MYSQL_DATABASE_URL") ||
+    System.get_env("DATABASE_URL") ||
     "mysql://root:mysql@localhost/#{mysql_db_suffix}"
 
 mysql_config = [
@@ -78,6 +83,7 @@ postgres_db_suffix =
 
 postgres_url =
   System.get_env("POSTGRES_DATABASE_URL") ||
+    System.get_env("DATABASE_URL") ||
     "ecto://postgres:postgres@localhost/#{postgres_db_suffix}"
 
 postgres_config = [
@@ -94,6 +100,9 @@ case repo_module do
   FuzzyRss.RepoMySQL -> config :fuzzy_rss, FuzzyRss.RepoMySQL, mysql_config
   FuzzyRss.RepoPostgres -> config :fuzzy_rss, FuzzyRss.RepoPostgres, postgres_config
 end
+
+# Set ecto_repos to the selected repo for migrations and other tasks
+config :fuzzy_rss, ecto_repos: [repo_module]
 
 # Store the selected repo module for use throughout the app
 config :fuzzy_rss, :repo_module, repo_module
@@ -210,3 +219,11 @@ if config_env() == :prod do
   #
   # See https://hexdocs.pm/swoosh/Swoosh.html#module-installation for details.
 end
+
+# Authentication configuration (read at runtime from environment variables)
+# DISABLE_MAGIC_LINK: Set to "true" to disable magic link auth and require password-based auth
+# SIGNUP_ENABLED: Set to "true" to allow unlimited signups (default),
+#                 "false" to allow only the first user to signup (one-time registration)
+config :fuzzy_rss, :auth,
+  disable_magic_link: System.get_env("DISABLE_MAGIC_LINK", "false") == "true",
+  signup_enabled: System.get_env("SIGNUP_ENABLED", "true") != "false"

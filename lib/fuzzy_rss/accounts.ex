@@ -49,10 +49,8 @@ defmodule FuzzyRss.Accounts do
     end
   end
 
-  @doc """
-  Returns the count of users in the database.
-  """
   defp user_count do
+    # Returns the count of users in the database.
     repo().aggregate(User, :count, :id)
   end
 

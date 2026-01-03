@@ -51,7 +51,9 @@ config :fuzzy_rss, FuzzyRssWeb.Endpoint,
 #
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
-config :fuzzy_rss, FuzzyRss.Mailer, adapter: Swoosh.Adapters.Local
+if config_env() == :dev do
+  config :fuzzy_rss, FuzzyRss.Mailer, adapter: Swoosh.Adapters.Local
+end
 
 # Configure esbuild (the version is required)
 config :esbuild,
@@ -96,14 +98,6 @@ config :ueberauth, Ueberauth.Strategy.OIDC,
 
 # Enable OIDC (optional, can be disabled)
 config :fuzzy_rss, :oidc_enabled, System.get_env("OIDC_ENABLED", "false") == "true"
-
-# Authentication configuration
-# DISABLE_MAGIC_LINK: Set to "true" to disable magic link auth and require password-based auth
-# SIGNUP_ENABLED: Set to "true" to allow unlimited signups (default),
-#                 "false" to allow only the first user to signup (one-time registration)
-config :fuzzy_rss, :auth,
-  disable_magic_link: System.get_env("DISABLE_MAGIC_LINK", "false") == "true",
-  signup_enabled: System.get_env("SIGNUP_ENABLED", "true") != "false"
 
 # Configure Oban for background job processing
 # Note: The repo and engine are configured in runtime.exs based on DATABASE_ADAPTER
