@@ -130,7 +130,7 @@ defmodule FuzzyRssWeb.ReaderLive.Reader do
       <!-- List Pane: Header + Entry List -->
       <div class={[
         "flex flex-col bg-base-100 min-w-0",
-        if(@layout_mode == "horizontal", do: "w-[450px] border-r", else: "flex-1")
+        if(@layout_mode == "horizontal", do: "w-[450px] border-r", else: "h-1/2 border-b")
       ]}>
         <!-- Header with Layout Toggle -->
         <div class="flex flex-col bg-base-200 border-b border-base-300 px-4 py-3 gap-3">
