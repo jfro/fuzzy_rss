@@ -1,18 +1,22 @@
 # FuzzyRss
 
-To start your Phoenix server:
+My attempt at an RSS aggregator more in line with what I'd like to see in one.
 
-* Run `mix setup` to install and setup dependencies
-* Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
+![FuzzyRss Screenshot](docs/main_screenshot.png)
 
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+## Features
 
-Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
+- Lightweight, fast, and easy to use
+- Import/export feeds (OPML) & starred articles (JSON)
+- Dual reader layout options, vertical or 3 pane horizontal
+- MySQL/MariaDB, PostgreSQL, & SQLite support for DB
 
-## Learn more
+## Getting Started
 
-* Official website: https://www.phoenixframework.org/
-* Guides: https://hexdocs.pm/phoenix/overview.html
-* Docs: https://hexdocs.pm/phoenix
-* Forum: https://elixirforum.com/c/phoenix-forum
-* Source: https://github.com/phoenixframework/phoenix
+Docker image coming soon. Otherwise requires Elixir 1.19 & Erlang OTP 28 installed. 
+
+## TODO
+
+- OIDC support
+- APIs
+- Mobile/PWA support
