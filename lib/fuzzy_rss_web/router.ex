@@ -18,8 +18,12 @@ defmodule FuzzyRssWeb.Router do
     plug :accepts, ["json"]
   end
 
-  pipeline :ueberauth do
-    plug Ueberauth
+  scope "/auth", FuzzyRssWeb do
+    pipe_through [:browser]
+
+    get "/oidc", OIDCController, :authorize
+    get "/oidc/callback", OIDCController, :callback
+    post "/oidc/callback", OIDCController, :callback
   end
 
   scope "/", FuzzyRssWeb do
@@ -97,16 +101,5 @@ defmodule FuzzyRssWeb.Router do
     get "/users/log-in/:token", UserSessionController, :confirm
     post "/users/log-in", UserSessionController, :create
     delete "/users/log-out", UserSessionController, :delete
-  end
-
-  # OIDC authentication routes (optional, can be disabled)
-  if Application.compile_env(:fuzzy_rss, [:oidc_enabled], false) do
-    scope "/auth", FuzzyRssWeb do
-      pipe_through [:browser, :ueberauth]
-
-      get "/:provider", AuthController, :request
-      get "/:provider/callback", AuthController, :callback
-      post "/:provider/callback", AuthController, :callback
-    end
   end
 end

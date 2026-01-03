@@ -84,18 +84,6 @@ config :logger, :default_formatter,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
-# Ueberauth configuration
-config :ueberauth, Ueberauth,
-  providers: [
-    oidc: {Ueberauth.Strategy.OIDC, []}
-  ]
-
-# Ueberauth OIDC strategy configuration (can be overridden per environment)
-config :ueberauth, Ueberauth.Strategy.OIDC,
-  client_id: System.get_env("OIDC_CLIENT_ID"),
-  client_secret: System.get_env("OIDC_CLIENT_SECRET"),
-  discovery_document_uri: System.get_env("OIDC_DISCOVERY_URL")
-
 # Enable OIDC (optional, can be disabled)
 config :fuzzy_rss, :oidc_enabled, System.get_env("OIDC_ENABLED", "false") == "true"
 

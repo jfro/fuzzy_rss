@@ -1,18 +1,18 @@
 defmodule FuzzyRss.Accounts.OIDC do
-  @moduledoc "OIDC/OAuth provider integration with Ueberauth"
+  @moduledoc "OIDC provider integration with Assent"
 
   alias FuzzyRss.Accounts
 
   defp repo, do: Application.fetch_env!(:fuzzy_rss, :repo_module)
 
-  def enabled?, do: Application.fetch_env!(:fuzzy_rss, :oidc_enabled)
+  def enabled?, do: Application.get_env(:fuzzy_rss, :oidc_enabled, false)
 
-  def find_or_create_user(provider, ueberauth_info) do
-    # Extract info from Ueberauth callback
-    provider_uid = ueberauth_info.uid
-    email = ueberauth_info.info.email
-    name = ueberauth_info.info.name
-    avatar_url = ueberauth_info.info.image
+  def find_or_create_user(provider, user_info) do
+    # Extract info from Assent user_info
+    provider_uid = to_string(user_info["sub"])
+    email = user_info["email"] || user_info["mail"]
+    name = user_info["name"] || user_info["preferred_username"]
+    avatar_url = user_info["picture"] || user_info["avatar_url"]
 
     # Download and store avatar as blob to avoid provider throttling
     avatar_blob =
@@ -24,16 +24,16 @@ defmodule FuzzyRss.Accounts.OIDC do
 
     identity_attrs = %{
       provider: to_string(provider),
-      provider_uid: to_string(provider_uid),
+      provider_uid: provider_uid,
       email: email,
       name: name,
       avatar: avatar_blob,
-      raw_data: Map.from_struct(ueberauth_info)
+      raw_data: user_info
     }
 
     case repo().get_by(Accounts.UserIdentity,
            provider: to_string(provider),
-           provider_uid: to_string(provider_uid)
+           provider_uid: provider_uid
          ) do
       nil ->
         # Create new user and identity
@@ -60,20 +60,24 @@ defmodule FuzzyRss.Accounts.OIDC do
   defp create_user_with_identity(email, identity_attrs) do
     repo().transaction(fn ->
       user =
-        repo().insert!(%Accounts.User{
-          email: email,
-          confirmed_at: DateTime.utc_now(:second)
-        })
+        case repo().get_by(Accounts.User, email: email) do
+          nil ->
+            repo().insert!(%Accounts.User{
+              email: email,
+              confirmed_at: DateTime.utc_now(:second)
+            })
 
-      identity_attrs = Map.put(identity_attrs, :user_id, user.id)
+          user ->
+            user
+        end
 
-      repo().insert!(Accounts.UserIdentity.changeset(%Accounts.UserIdentity{}, identity_attrs))
+      identity_attrs = Map.delete(identity_attrs, :user_id)
+
+      %Accounts.UserIdentity{user_id: user.id}
+      |> Accounts.UserIdentity.changeset(identity_attrs)
+      |> repo().insert!()
 
       user
     end)
-    |> case do
-      {:ok, user} -> {:ok, user}
-      {:error, reason} -> {:error, reason}
-    end
   end
 end

@@ -356,3 +356,22 @@ end
 config :fuzzy_rss, :auth,
   disable_magic_link: System.get_env("DISABLE_MAGIC_LINK", "false") == "true",
   signup_enabled: System.get_env("SIGNUP_ENABLED", "true") != "false"
+
+# OIDC configuration (optional)
+oidc_enabled = System.get_env("OIDC_ENABLED", "false") == "true"
+config :fuzzy_rss, :oidc_enabled, oidc_enabled
+
+if oidc_enabled do
+  config :fuzzy_rss, :oidc,
+    client_id:
+      System.get_env("OIDC_CLIENT_ID") || raise("OIDC_CLIENT_ID is required when OIDC is enabled"),
+    client_secret:
+      System.get_env("OIDC_CLIENT_SECRET") ||
+        raise("OIDC_CLIENT_SECRET is required when OIDC is enabled"),
+    base_url:
+      System.get_env("OIDC_BASE_URL") || raise("OIDC_BASE_URL is required when OIDC is enabled"),
+    redirect_uri:
+      System.get_env("OIDC_REDIRECT_URI") ||
+        raise("OIDC_REDIRECT_URI is required when OIDC is enabled"),
+    authorization_params: [scope: System.get_env("OIDC_SCOPE", "openid profile email")]
+end

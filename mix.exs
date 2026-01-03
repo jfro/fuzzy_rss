@@ -107,8 +107,7 @@ defmodule FuzzyRss.MixProject do
       # Password hashing
       {:bcrypt_elixir, "~> 3.0"},
       # OAuth/OIDC authentication
-      {:ueberauth, "~> 0.10"},
-      {:ueberauth_oidcc, "~> 0.4"},
+      {:assent, "~> 0.3.1"},
 
       # RSS & Feed Processing
       {:fast_rss, "~> 0.5"},
