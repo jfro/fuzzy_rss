@@ -217,6 +217,89 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
   end
 
   @impl true
+  def handle_event("validate_opml", _params, socket) do
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("validate_starred", _params, socket) do
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("import_opml", _params, socket) do
+    require Logger
+    user = socket.assigns.current_user
+
+    Logger.debug("Index: Starting OPML import, uploads: #{inspect(socket.assigns.uploads)}")
+
+    uploaded_files =
+      consume_uploaded_entries(socket, :opml_file, fn %{path: path}, _entry ->
+        Logger.debug("Index: Reading file from #{path}")
+        {:ok, File.read!(path)}
+      end)
+
+    Logger.debug("Index: Consumed #{Enum.count(uploaded_files)} files")
+
+    case uploaded_files do
+      [xml | _] ->
+        Logger.debug("Index: Importing OPML, size: #{byte_size(xml)}")
+
+        case FuzzyRss.Feeds.OPML.import(xml, user) do
+          {:ok, results} ->
+            message =
+              "Imported #{results.created_feeds} feeds and #{results.created_folders} folders"
+
+            Logger.info("Index: #{message}")
+
+            {:noreply,
+             socket
+             |> put_flash(:info, message)
+             |> load_sidebar_data()
+             |> load_entries()}
+
+          {:error, reason} ->
+            Logger.error("Index: Import failed: #{inspect(reason)}")
+            {:noreply, put_flash(socket, :error, "Import failed: #{inspect(reason)}")}
+        end
+
+      [] ->
+        Logger.warning("Index: No files uploaded")
+        {:noreply, put_flash(socket, :error, "No file uploaded")}
+    end
+  end
+
+  @impl true
+  def handle_event("import_starred", _params, socket) do
+    user = socket.assigns.current_user
+
+    uploaded_files =
+      consume_uploaded_entries(socket, :starred_file, fn %{path: path}, _entry ->
+        {:ok, File.read!(path)}
+      end)
+
+    case uploaded_files do
+      [json | _] ->
+        case FuzzyRss.Feeds.FreshRSSJSON.import_starred(json, user) do
+          {:ok, results} ->
+            message =
+              "Imported #{results.imported} starred articles (#{results.errors} errors)"
+
+            {:noreply,
+             socket
+             |> put_flash(:info, message)
+             |> load_entries()}
+
+          {:error, reason} ->
+            {:noreply, put_flash(socket, :error, "Import failed: #{inspect(reason)}")}
+        end
+
+      [] ->
+        {:noreply, put_flash(socket, :error, "No file uploaded")}
+    end
+  end
+
+  @impl true
   def handle_event("unsubscribe_feed", %{"feed_id" => feed_id}, socket) do
     feed_id = String.to_integer(feed_id)
 

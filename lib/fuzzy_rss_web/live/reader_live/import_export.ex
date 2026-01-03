@@ -57,77 +57,6 @@ defmodule FuzzyRssWeb.ReaderLive.ImportExport do
   end
 
   @impl true
-  def handle_event("import_opml", _params, socket) do
-    require Logger
-    user = socket.assigns.current_user
-
-    Logger.debug(
-      "ImportExport: Starting OPML import, uploads: #{inspect(socket.assigns.uploads)}"
-    )
-
-    uploaded_files =
-      consume_uploaded_entries(socket, :opml_file, fn %{path: path}, _entry ->
-        Logger.debug("ImportExport: Reading file from #{path}")
-        {:ok, File.read!(path)}
-      end)
-
-    Logger.debug("ImportExport: Consumed #{Enum.count(uploaded_files)} files")
-
-    case uploaded_files do
-      [xml | _] ->
-        Logger.debug("ImportExport: Importing OPML, size: #{byte_size(xml)}")
-
-        case OPML.import(xml, user) do
-          {:ok, results} ->
-            message =
-              "Imported #{results.created_feeds} feeds and #{results.created_folders} folders"
-
-            Logger.info("ImportExport: #{message}")
-            # Send message to parent to reload sidebar
-            send(socket.root_pid, {:import_completed, :opml})
-            {:noreply, put_flash(socket, :info, message)}
-
-          {:error, reason} ->
-            Logger.error("ImportExport: Import failed: #{inspect(reason)}")
-            {:noreply, put_flash(socket, :error, "Import failed: #{inspect(reason)}")}
-        end
-
-      [] ->
-        Logger.warning("ImportExport: No files uploaded")
-        {:noreply, put_flash(socket, :error, "No file uploaded")}
-    end
-  end
-
-  @impl true
-  def handle_event("import_starred", _params, socket) do
-    user = socket.assigns.current_user
-
-    uploaded_files =
-      consume_uploaded_entries(socket, :starred_file, fn %{path: path}, _entry ->
-        {:ok, File.read!(path)}
-      end)
-
-    case uploaded_files do
-      [json | _] ->
-        case FreshRSSJSON.import_starred(json, user) do
-          {:ok, results} ->
-            message =
-              "Imported #{results.imported} starred articles (#{results.errors} errors)"
-
-            # Send message to parent to reload entries if needed
-            send(socket.root_pid, {:import_completed, :starred})
-            {:noreply, put_flash(socket, :info, message)}
-
-          {:error, reason} ->
-            {:noreply, put_flash(socket, :error, "Import failed: #{inspect(reason)}")}
-        end
-
-      [] ->
-        {:noreply, put_flash(socket, :error, "No file uploaded")}
-    end
-  end
-
-  @impl true
   def render(assigns) do
     ~H"""
     <div class="max-w-2xl mx-auto p-6">
@@ -158,7 +87,6 @@ defmodule FuzzyRssWeb.ReaderLive.ImportExport do
           <form
             phx-submit="import_opml"
             phx-change="validate_opml"
-            phx-target={@myself}
             enctype="multipart/form-data"
           >
             <div class="form-control">
@@ -196,7 +124,6 @@ defmodule FuzzyRssWeb.ReaderLive.ImportExport do
           <form
             phx-submit="import_starred"
             phx-change="validate_starred"
-            phx-target={@myself}
             enctype="multipart/form-data"
           >
             <div class="form-control">
