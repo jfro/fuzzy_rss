@@ -8,10 +8,18 @@ defmodule FuzzyRssWeb.ReaderLive.ImportExport do
     socket =
       socket
       |> assign(:current_user, assigns.current_user)
-      |> assign(:opml_file_upload, assigns.opml_file_upload)
-      |> assign(:starred_file_upload, assigns.starred_file_upload)
       |> assign(:opml_filename, "fuzzyrss-subscriptions.opml")
       |> assign(:freshrss_filename, "fuzzyrss-starred.json")
+
+    # Only set up uploads if not already done
+    socket =
+      if socket.assigns[:uploads] do
+        socket
+      else
+        socket
+        |> allow_upload(:opml_file, accept: ~w(.xml), max_entries: 1)
+        |> allow_upload(:starred_file, accept: ~w(.json), max_entries: 1)
+      end
 
     {:ok, socket}
   end
@@ -57,6 +65,85 @@ defmodule FuzzyRssWeb.ReaderLive.ImportExport do
   end
 
   @impl true
+  def handle_event("import_opml", _params, socket) do
+    require Logger
+    user = socket.assigns.current_user
+
+    Logger.debug(
+      "ImportExport: Starting OPML import, uploads: #{inspect(socket.assigns.uploads)}"
+    )
+
+    uploaded_files =
+      consume_uploaded_entries(socket, :opml_file, fn %{path: path}, _entry ->
+        Logger.debug("ImportExport: Reading file from #{path}")
+        {:ok, File.read!(path)}
+      end)
+
+    Logger.debug("ImportExport: Consumed #{Enum.count(uploaded_files)} files")
+
+    case uploaded_files do
+      [xml | _] ->
+        Logger.debug("ImportExport: Importing OPML, size: #{byte_size(xml)}")
+
+        case OPML.import(xml, user) do
+          {:ok, results} ->
+            message =
+              "Imported #{results.created_feeds} feeds and #{results.created_folders} folders"
+
+            Logger.info("ImportExport: #{message}")
+
+            {:noreply,
+             socket
+             |> put_flash(:info, message)
+             |> send_update_to_parent({:import_completed, :opml})}
+
+          {:error, reason} ->
+            Logger.error("ImportExport: Import failed: #{inspect(reason)}")
+            {:noreply, put_flash(socket, :error, "Import failed: #{inspect(reason)}")}
+        end
+
+      [] ->
+        Logger.warning("ImportExport: No files uploaded")
+        {:noreply, put_flash(socket, :error, "No file uploaded")}
+    end
+  end
+
+  @impl true
+  def handle_event("import_starred", _params, socket) do
+    user = socket.assigns.current_user
+
+    uploaded_files =
+      consume_uploaded_entries(socket, :starred_file, fn %{path: path}, _entry ->
+        {:ok, File.read!(path)}
+      end)
+
+    case uploaded_files do
+      [json | _] ->
+        case FreshRSSJSON.import_starred(json, user) do
+          {:ok, results} ->
+            message =
+              "Imported #{results.imported} starred articles (#{results.errors} errors)"
+
+            {:noreply,
+             socket
+             |> put_flash(:info, message)
+             |> send_update_to_parent({:import_completed, :starred})}
+
+          {:error, reason} ->
+            {:noreply, put_flash(socket, :error, "Import failed: #{inspect(reason)}")}
+        end
+
+      [] ->
+        {:noreply, put_flash(socket, :error, "No file uploaded")}
+    end
+  end
+
+  defp send_update_to_parent(socket, message) do
+    send(self(), message)
+    socket
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
     <div class="max-w-2xl mx-auto p-6">
@@ -87,11 +174,12 @@ defmodule FuzzyRssWeb.ReaderLive.ImportExport do
           <form
             phx-submit="import_opml"
             phx-change="validate_opml"
+            phx-target={@myself}
             enctype="multipart/form-data"
           >
             <div class="form-control">
               <.live_file_input
-                upload={@opml_file_upload}
+                upload={@uploads.opml_file}
                 class="file-input file-input-bordered w-full"
                 required
               />
@@ -124,11 +212,12 @@ defmodule FuzzyRssWeb.ReaderLive.ImportExport do
           <form
             phx-submit="import_starred"
             phx-change="validate_starred"
+            phx-target={@myself}
             enctype="multipart/form-data"
           >
             <div class="form-control">
               <.live_file_input
-                upload={@starred_file_upload}
+                upload={@uploads.starred_file}
                 class="file-input file-input-bordered w-full"
                 required
               />

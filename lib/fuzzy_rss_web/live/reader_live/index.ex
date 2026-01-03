@@ -30,8 +30,6 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
       |> assign(:page_mode, :reader)
       |> assign(:sidebar_tree, [])
       |> assign(:expanded_folders, expanded_from_session)
-      |> allow_upload(:opml_file, accept: ~w(.xml), max_entries: 1)
-      |> allow_upload(:starred_file, accept: ~w(.json), max_entries: 1)
       |> load_sidebar_data()
       |> load_entries()
 
@@ -96,103 +94,6 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
   end
 
   @impl true
-  def handle_event("mark_read", %{"entry_id" => entry_id}, socket) do
-    Content.mark_as_read(socket.assigns.current_user, String.to_integer(entry_id))
-    {:noreply, load_entries(socket)}
-  end
-
-  @impl true
-  def handle_event("toggle_starred", %{"entry_id" => entry_id}, socket) do
-    entry_id = String.to_integer(entry_id)
-    Content.toggle_starred(socket.assigns.current_user, entry_id)
-
-    # Fetch fresh entry data with updated starred state
-    fresh_entry = Content.get_entry!(entry_id) |> FuzzyRss.Repo.preload(:feed)
-    state = Content.get_entry_state(socket.assigns.current_user, entry_id)
-
-    fresh_entry =
-      if state do
-        Map.put(fresh_entry, :user_entry_states, [state])
-      else
-        Map.put(fresh_entry, :user_entry_states, [])
-      end
-
-    # Update the entry in the entries list to keep data in sync
-    entries =
-      Enum.map(socket.assigns.entries, fn e ->
-        if e.id == entry_id, do: fresh_entry, else: e
-      end)
-
-    socket = assign(socket, :entries, entries)
-
-    # Update selected_entry to the fresh version
-    selected_entry =
-      if socket.assigns.selected_entry && socket.assigns.selected_entry.id == entry_id,
-        do: fresh_entry,
-        else: socket.assigns.selected_entry
-
-    {:noreply, assign(socket, :selected_entry, selected_entry)}
-  end
-
-  @impl true
-  def handle_event("mark_all_read", _params, socket) do
-    opts = [feed_id: socket.assigns.selected_feed, folder_id: socket.assigns.selected_folder]
-    Content.mark_all_as_read(socket.assigns.current_user, opts)
-    {:noreply, load_entries(socket)}
-  end
-
-  @impl true
-  def handle_event("toggle_feed_filter", _params, socket) do
-    # Only allow toggling when viewing a specific feed or folder
-    if socket.assigns.selected_feed || socket.assigns.selected_folder do
-      new_filter = if socket.assigns.filter == :unread, do: :all, else: :unread
-
-      socket
-      |> assign(:filter, new_filter)
-      |> load_entries()
-      |> then(&{:noreply, &1})
-    else
-      {:noreply, socket}
-    end
-  end
-
-  @impl true
-  def handle_event("select_entry", %{"entry_id" => entry_id}, socket) do
-    entry_id = String.to_integer(entry_id)
-    entry = Enum.find(socket.assigns.entries, &(&1.id == entry_id))
-
-    socket =
-      if entry do
-        # Mark as read in database
-        Content.mark_as_read(socket.assigns.current_user, entry_id)
-
-        # Fetch updated entry state to show read status in list
-        state = Content.get_entry_state(socket.assigns.current_user, entry_id)
-
-        updated_entry =
-          if state do
-            Map.put(entry, :user_entry_states, [state])
-          else
-            Map.put(entry, :user_entry_states, [])
-          end
-
-        # Update the entry in the entries list to reflect read state
-        entries =
-          Enum.map(socket.assigns.entries, fn e ->
-            if e.id == entry_id, do: updated_entry, else: e
-          end)
-
-        socket
-        |> assign(:entries, entries)
-        |> assign(:selected_entry, updated_entry)
-      else
-        assign(socket, :selected_entry, entry)
-      end
-
-    {:noreply, socket}
-  end
-
-  @impl true
   def handle_event("toggle_folder", %{"folder_id" => folder_id}, socket) do
     folder_id = String.to_integer(folder_id)
     expanded = socket.assigns.expanded_folders
@@ -214,89 +115,6 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
   def handle_event("refresh_feed", %{"feed_id" => feed_id}, socket) do
     Content.refresh_feed(String.to_integer(feed_id))
     {:noreply, load_sidebar_data(socket)}
-  end
-
-  @impl true
-  def handle_event("validate_opml", _params, socket) do
-    {:noreply, socket}
-  end
-
-  @impl true
-  def handle_event("validate_starred", _params, socket) do
-    {:noreply, socket}
-  end
-
-  @impl true
-  def handle_event("import_opml", _params, socket) do
-    require Logger
-    user = socket.assigns.current_user
-
-    Logger.debug("Index: Starting OPML import, uploads: #{inspect(socket.assigns.uploads)}")
-
-    uploaded_files =
-      consume_uploaded_entries(socket, :opml_file, fn %{path: path}, _entry ->
-        Logger.debug("Index: Reading file from #{path}")
-        {:ok, File.read!(path)}
-      end)
-
-    Logger.debug("Index: Consumed #{Enum.count(uploaded_files)} files")
-
-    case uploaded_files do
-      [xml | _] ->
-        Logger.debug("Index: Importing OPML, size: #{byte_size(xml)}")
-
-        case FuzzyRss.Feeds.OPML.import(xml, user) do
-          {:ok, results} ->
-            message =
-              "Imported #{results.created_feeds} feeds and #{results.created_folders} folders"
-
-            Logger.info("Index: #{message}")
-
-            {:noreply,
-             socket
-             |> put_flash(:info, message)
-             |> load_sidebar_data()
-             |> load_entries()}
-
-          {:error, reason} ->
-            Logger.error("Index: Import failed: #{inspect(reason)}")
-            {:noreply, put_flash(socket, :error, "Import failed: #{inspect(reason)}")}
-        end
-
-      [] ->
-        Logger.warning("Index: No files uploaded")
-        {:noreply, put_flash(socket, :error, "No file uploaded")}
-    end
-  end
-
-  @impl true
-  def handle_event("import_starred", _params, socket) do
-    user = socket.assigns.current_user
-
-    uploaded_files =
-      consume_uploaded_entries(socket, :starred_file, fn %{path: path}, _entry ->
-        {:ok, File.read!(path)}
-      end)
-
-    case uploaded_files do
-      [json | _] ->
-        case FuzzyRss.Feeds.FreshRSSJSON.import_starred(json, user) do
-          {:ok, results} ->
-            message =
-              "Imported #{results.imported} starred articles (#{results.errors} errors)"
-
-            {:noreply,
-             socket
-             |> put_flash(:info, message)
-             |> load_entries()}
-
-          {:error, reason} ->
-            {:noreply, put_flash(socket, :error, "Import failed: #{inspect(reason)}")}
-        end
-
-      [] ->
-        {:noreply, put_flash(socket, :error, "No file uploaded")}
-    end
   end
 
   @impl true
@@ -356,8 +174,20 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
     |> then(&{:noreply, &1})
   end
 
-  defp is_read?(entry) do
-    Enum.any?(entry.user_entry_states, & &1.read)
+  @impl true
+  def handle_info(:reload_entries, socket) do
+    socket
+    |> load_sidebar_data()
+    |> load_entries()
+    |> then(&{:noreply, &1})
+  end
+
+  @impl true
+  def handle_info({:filter_changed, new_filter}, socket) do
+    socket
+    |> assign(:filter, new_filter)
+    |> load_entries()
+    |> then(&{:noreply, &1})
   end
 
   defp extract_feeds_from_tree(tree_nodes) do
