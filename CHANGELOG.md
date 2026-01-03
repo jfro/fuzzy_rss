@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.1.1 - 2026-01-03
+#### Bug Fixes
+- mysql error due to conflict handling differences - (8b346aa) - *jfro*
+- configurable from email, fix examples to handle url env vars with - (8d458d0) - *jfro*
+- inability to configure mailer fix: lack of inconsistent docs/naming - (1c92267) - *jfro*
+
+- - -
+
 ## v0.1.0 - 2026-01-03
 #### Features
 - ability to run without mailer, just user/pass signup - (b49fd99) - *jfro*
