@@ -47,7 +47,6 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
                :feeds_discover,
                :folders,
                :settings,
-               :settings_import_export,
                :account_settings
              ] ->
           assign(socket, :page_mode, :management)

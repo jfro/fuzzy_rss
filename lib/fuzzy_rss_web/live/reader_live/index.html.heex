@@ -50,12 +50,6 @@
             id="settings_menu"
             {assigns}
           />
-        <% :settings_import_export -> %>
-          <.live_component
-            module={FuzzyRssWeb.ReaderLive.ImportExport}
-            id="import_export"
-            current_user={@current_user}
-          />
         <% :account_settings -> %>
           <.live_component
             module={FuzzyRssWeb.ReaderLive.AccountSettings}

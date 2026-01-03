@@ -15,22 +15,14 @@ defmodule FuzzyRssWeb.ReaderLive.SettingsMenu do
 
       <div class="grid gap-4">
         <.link
-          patch={~p"/app/settings/import-export"}
-          class="card bg-base-100 shadow hover:shadow-lg transition-shadow"
-        >
-          <div class="card-body">
-            <h2 class="card-title">Import & Export</h2>
-            <p class="text-base-content/60">Manage your subscriptions and starred articles</p>
-          </div>
-        </.link>
-
-        <.link
           patch={~p"/app/feeds"}
           class="card bg-base-100 shadow hover:shadow-lg transition-shadow"
         >
           <div class="card-body">
             <h2 class="card-title">Manage Feeds</h2>
-            <p class="text-base-content/60">View and manage your feed subscriptions</p>
+            <p class="text-base-content/60">
+              View, manage, import and export your feed subscriptions
+            </p>
           </div>
         </.link>
 

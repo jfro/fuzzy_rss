@@ -86,7 +86,6 @@ defmodule FuzzyRssWeb.Router do
       live "/folders", ReaderLive.Index, :folders
 
       live "/settings", ReaderLive.Index, :settings
-      live "/settings/import-export", ReaderLive.Index, :settings_import_export
       live "/account-settings", ReaderLive.Index, :account_settings
     end
   end
