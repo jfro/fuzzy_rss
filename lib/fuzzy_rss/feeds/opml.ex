@@ -1,6 +1,7 @@
 defmodule FuzzyRss.Feeds.OPML do
   @moduledoc "OPML import/export for subscription lists"
 
+  require Logger
   import Ecto.Query
   alias FuzzyRss.Content
   alias FuzzyRss.Content.Subscription
@@ -16,7 +17,6 @@ defmodule FuzzyRss.Feeds.OPML do
   end
 
   def import(xml_string, user) do
-    require Logger
     Logger.debug("OPML: Starting import, input size: #{byte_size(xml_string)}")
 
     with {:ok, document} <- parse_opml(xml_string),
@@ -114,7 +114,6 @@ defmodule FuzzyRss.Feeds.OPML do
   end
 
   defp process_outlines(outlines, user, parent_folder_id) do
-    require Logger
     results = %{created_feeds: 0, created_folders: 0, errors: []}
 
     Enum.reduce(outlines, results, fn outline, acc ->
@@ -158,18 +157,30 @@ defmodule FuzzyRss.Feeds.OPML do
     name = Floki.attribute(outline, "text") |> List.first()
     children = Floki.find(outline, "> outline")
 
-    case create_folder(user, name) do
-      {:ok, folder} ->
-        child_results = process_outlines(children, user, folder.id)
+    # Special case: skip creating a folder for "Uncategorized" and import feeds at top level
+    if is_uncategorized?(name) do
+      Logger.debug("OPML: Skipping Uncategorized folder, importing feeds at top level")
+      child_results = process_outlines(children, user, nil)
 
-        %{
-          acc
-          | created_feeds: acc.created_feeds + child_results.created_feeds,
-            created_folders: acc.created_folders + child_results.created_folders + 1
-        }
+      %{
+        acc
+        | created_feeds: acc.created_feeds + child_results.created_feeds,
+          created_folders: acc.created_folders + child_results.created_folders
+      }
+    else
+      case create_folder(user, name) do
+        {:ok, folder} ->
+          child_results = process_outlines(children, user, folder.id)
 
-      {:error, reason} ->
-        Map.update(acc, :errors, [reason], &[reason | &1])
+          %{
+            acc
+            | created_feeds: acc.created_feeds + child_results.created_feeds,
+              created_folders: acc.created_folders + child_results.created_folders + 1
+          }
+
+        {:error, reason} ->
+          Map.update(acc, :errors, [reason], &[reason | &1])
+      end
     end
   end
 
@@ -194,6 +205,10 @@ defmodule FuzzyRss.Feeds.OPML do
       name: name,
       slug: slugify(name)
     })
+  end
+
+  defp is_uncategorized?(name) do
+    name && String.downcase(name) == "uncategorized"
   end
 
   defp slugify(nil), do: "untitled"
