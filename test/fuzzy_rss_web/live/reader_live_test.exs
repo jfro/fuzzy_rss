@@ -123,4 +123,61 @@ defmodule FuzzyRssWeb.ReaderLiveTest do
       assert html =~ "Manage Feeds"
     end
   end
+
+  describe "Layout Mode Toggle" do
+    test "renders layout mode toggle buttons", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/app")
+
+      # Verify both layout toggle buttons are present
+      assert html =~ "hero-rectangle-stack"
+      assert html =~ "hero-view-columns"
+    end
+
+    test "vertical layout mode is selected by default", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/app")
+
+      # The vertical layout button should have btn-primary class
+      assert has_element?(
+               view,
+               "button[title=\"Vertical layout (list on top, article below)\"].btn-primary"
+             )
+    end
+
+    test "switching to horizontal layout mode", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/app")
+
+      # Click the horizontal layout button
+      view
+      |> element("button[title=\"Horizontal layout (sidebar, list, and article side-by-side)\"]")
+      |> render_click()
+
+      # The horizontal layout button should now have btn-primary class
+      assert has_element?(
+               view,
+               "button[title=\"Horizontal layout (sidebar, list, and article side-by-side)\"].btn-primary"
+             )
+    end
+
+    test "layout mode preference is persisted", %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/app")
+
+      # Switch to horizontal layout
+      view
+      |> element("button[title=\"Horizontal layout (sidebar, list, and article side-by-side)\"]")
+      |> render_click()
+
+      # Reload the page
+      {:ok, new_view, _html} = live(conn, ~p"/app")
+
+      # The horizontal layout button should still be active (preference persisted)
+      assert has_element?(
+               new_view,
+               "button[title=\"Horizontal layout (sidebar, list, and article side-by-side)\"].btn-primary"
+             )
+
+      # Also verify the preference was saved in the database
+      updated_user = FuzzyRss.Accounts.get_user!(user.id)
+      assert updated_user.preferences["layout_mode"] == "horizontal"
+    end
+  end
 end

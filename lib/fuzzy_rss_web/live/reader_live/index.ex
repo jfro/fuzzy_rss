@@ -2,6 +2,7 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
   use FuzzyRssWeb, :live_view
 
   alias FuzzyRss.Content
+  alias FuzzyRss.Accounts
 
   @impl true
   def mount(_params, session, socket) do
@@ -19,6 +20,10 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
       |> Enum.reject(&is_nil/1)
       |> MapSet.new()
 
+    layout_mode =
+      (socket.assigns.current_user.preferences || %{})
+      |> Map.get("layout_mode", "vertical")
+
     socket =
       socket
       |> assign(:filter, :unread)
@@ -30,6 +35,7 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
       |> assign(:page_mode, :reader)
       |> assign(:sidebar_tree, [])
       |> assign(:expanded_folders, expanded_from_session)
+      |> assign(:layout_mode, layout_mode)
       |> load_sidebar_data()
       |> load_entries()
 
@@ -90,6 +96,23 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
       end
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("set_layout_mode", %{"mode" => mode}, socket)
+      when mode in ["vertical", "horizontal"] do
+    case Accounts.update_user_preference(socket.assigns.current_user, "layout_mode", mode) do
+      {:ok, updated_user} ->
+        {:noreply,
+         socket
+         |> assign(:layout_mode, mode)
+         |> assign(:current_user, updated_user)}
+
+      {:error, _reason} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Failed to update layout preference")}
+    end
   end
 
   @impl true

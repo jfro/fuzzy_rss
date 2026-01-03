@@ -1,15 +1,25 @@
 defmodule FuzzyRssWeb.ReaderLive.EntryDetail do
   use FuzzyRssWeb, :live_component
 
+  @impl true
+  def update(assigns, socket) do
+    socket = assign(socket, :layout_mode, assigns[:layout_mode] || "vertical")
+    {:ok, socket}
+  end
+
   defp is_starred?(entry) do
     Enum.any?(entry.user_entry_states, & &1.starred)
   end
 
+  @impl true
   def render(assigns) do
     assigns = assign(assigns, :is_starred, is_starred?(assigns.selected_entry))
 
     ~H"""
-    <article class="flex-1 bg-base-100 overflow-y-auto border-l border-base-300 min-w-0">
+    <article
+      :if={assigns[:layout_mode] != "horizontal"}
+      class="flex-1 bg-base-100 overflow-y-auto border-l border-base-300 min-w-0 hidden lg:block"
+    >
       <div class="p-6">
         <div class="mb-6">
           <h1 class="text-3xl font-bold mb-3">{@selected_entry.title}</h1>

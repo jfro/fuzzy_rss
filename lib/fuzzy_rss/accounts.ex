@@ -348,6 +348,29 @@ defmodule FuzzyRss.Accounts do
     :ok
   end
 
+  ## User Preferences
+
+  @doc """
+  Updates a user preference value.
+
+  Preferences are stored as a map in the user record.
+
+  ## Examples
+
+      iex> update_user_preference(user, "layout_mode", "horizontal")
+      {:ok, %User{}}
+
+      iex> update_user_preference(user, "theme", "dark")
+      {:ok, %User{}}
+  """
+  def update_user_preference(user, key, value) when is_binary(key) do
+    preferences = Map.put(user.preferences || %{}, key, value)
+
+    user
+    |> Ecto.Changeset.change(%{preferences: preferences})
+    |> repo().update()
+  end
+
   ## Token helper
 
   defp update_user_and_delete_all_tokens(changeset) do
