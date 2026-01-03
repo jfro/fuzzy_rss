@@ -156,26 +156,50 @@ defmodule FuzzyRss.Feeds.Parser do
   defp parse_date(_), do: DateTime.utc_now()
 
   defp parse_rfc2822_with_timex(date_string) do
-    # RFC2822 format: "Thu, 25 Jul 2024 23:59:20 +0100"
-    case Timex.parse(date_string, "{WDshort}, {D} {Mshort} {YYYY} {h24}:{m}:{s} {Z}") do
-      {:ok, dt} -> {:ok, dt}
-      :error -> try_alternate_rfc2822_formats(date_string)
+    # Try timezone name first since it's more common in RSS feeds: "Thu, 25 Jul 2024 23:59:20 GMT"
+    try do
+      case Timex.parse(date_string, "{WDshort}, {D} {Mshort} {YYYY} {h24}:{m}:{s} {Zname}") do
+        {:ok, dt} -> {:ok, dt}
+        _ -> try_rfc2822_with_offset(date_string)
+      end
+    rescue
+      _ -> try_rfc2822_with_offset(date_string)
+    end
+  end
+
+  defp try_rfc2822_with_offset(date_string) do
+    # Try with timezone offset: "Thu, 25 Jul 2024 23:59:20 +0100"
+    try do
+      case Timex.parse(date_string, "{WDshort}, {D} {Mshort} {YYYY} {h24}:{m}:{s} {Z}") do
+        {:ok, dt} -> {:ok, dt}
+        _ -> try_alternate_rfc2822_formats(date_string)
+      end
+    rescue
+      _ -> try_alternate_rfc2822_formats(date_string)
     end
   end
 
   defp try_alternate_rfc2822_formats(date_string) do
-    # Try without day of week: "25 Jul 2024 23:59:20 +0100"
-    case Timex.parse(date_string, "{D} {Mshort} {YYYY} {h24}:{m}:{s} {Z}") do
-      {:ok, dt} -> {:ok, dt}
-      :error -> try_rfc2822_with_tz_name(date_string)
+    # Try without day of week: "25 Jul 2024 23:59:20 GMT"
+    try do
+      case Timex.parse(date_string, "{D} {Mshort} {YYYY} {h24}:{m}:{s} {Zname}") do
+        {:ok, dt} -> {:ok, dt}
+        _ -> try_rfc2822_without_day_offset(date_string)
+      end
+    rescue
+      _ -> try_rfc2822_without_day_offset(date_string)
     end
   end
 
-  defp try_rfc2822_with_tz_name(date_string) do
-    # Try with timezone name: "Thu, 25 Jul 2024 23:59:20 GMT"
-    case Timex.parse(date_string, "{WDshort}, {D} {Mshort} {YYYY} {h24}:{m}:{s} {Zname}") do
-      {:ok, dt} -> {:ok, dt}
-      :error -> :error
+  defp try_rfc2822_without_day_offset(date_string) do
+    # Try without day of week and with offset: "25 Jul 2024 23:59:20 +0100"
+    try do
+      case Timex.parse(date_string, "{D} {Mshort} {YYYY} {h24}:{m}:{s} {Z}") do
+        {:ok, dt} -> {:ok, dt}
+        _ -> :error
+      end
+    rescue
+      _ -> :error
     end
   end
 
