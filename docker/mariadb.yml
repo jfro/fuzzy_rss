@@ -1,3 +1,15 @@
+# MariaDB Docker Compose Configuration
+#
+# Quick start:
+#   docker compose -f docker/mariadb.yml up
+#
+# To configure mail and other settings:
+#   cp .env.docker.example .env
+#   # Edit .env with your values
+#   docker compose -f docker/mariadb.yml up
+#
+# The .env file will be automatically loaded by docker compose
+
 services:
   db:
     image: mariadb:alpine
@@ -27,8 +39,22 @@ services:
       DATABASE_ADAPTER: mysql
       DATABASE_URL: mysql://fuzzy_rss:password@db:3306/fuzzy_rss
       SECRET_KEY_BASE: uYCtaRnHv8guzrfpWoLxGwnMj29yqhM/t3WENB3IRzgMNRnPFP/LumaChLVv2JIB
-      PHX_HOST: localhost
-      PORT: 4000
+      PHX_HOST: ${PHX_HOST:-localhost}
+      PHX_URL_SCHEME: ${PHX_URL_SCHEME:-http}
+      PHX_URL_PORT: ${PHX_URL_PORT:-4000}
+      PORT: ${PORT:-4000}
+      # Mail configuration (defaults to local for dev)
+      MAIL_ADAPTER: ${MAIL_ADAPTER:-local}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-FuzzyRss}
+      MAIL_FROM_EMAIL: ${MAIL_FROM_EMAIL:-noreply@example.com}
+      MAIL_SMTP_RELAY: ${MAIL_SMTP_RELAY:-}
+      MAIL_SMTP_USERNAME: ${MAIL_SMTP_USERNAME:-}
+      MAIL_SMTP_PASSWORD: ${MAIL_SMTP_PASSWORD:-}
+      MAIL_SMTP_PORT: ${MAIL_SMTP_PORT:-587}
+      MAIL_MAILGUN_API_KEY: ${MAIL_MAILGUN_API_KEY:-}
+      MAIL_MAILGUN_DOMAIN: ${MAIL_MAILGUN_DOMAIN:-}
+      MAIL_SENDGRID_API_KEY: ${MAIL_SENDGRID_API_KEY:-}
+      MAIL_POSTMARK_API_KEY: ${MAIL_POSTMARK_API_KEY:-}
       DISABLE_MAGIC_LINK: true
     depends_on:
       db:

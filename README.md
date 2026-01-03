@@ -13,7 +13,30 @@ My attempt at an RSS aggregator more in line with what I'd like to see in one.
 
 ## Getting Started
 
-Docker image coming soon. Otherwise requires Elixir 1.19 & Erlang OTP 28 installed.
+### Docker (Recommended)
+
+```bash
+# Quick start with PostgreSQL
+docker compose -f docker/postgres.yml up
+
+# Or choose a different database
+docker compose -f docker/mariadb.yml up
+docker compose -f docker/sqlite.yml up
+```
+
+The app will be available at `http://localhost:4000`
+
+**To configure mail:** See `docker/README.md` or copy `.env.docker.example` to `.env` and edit.
+
+### Local Development
+
+Requires Elixir 1.19 & Erlang OTP 28 installed.
+
+```bash
+mix deps.get
+mix ecto.setup
+mix phx.server
+```
 
 ## Configuration
 
@@ -59,6 +82,8 @@ DATABASE_SSL=false                 # Enable SSL for database (default: false)
 
 ```bash
 MAIL_ADAPTER=local                 # local, smtp, mailgun, sendgrid, postmark, gmail
+MAIL_FROM_NAME=FuzzyRss            # Sender name (default: FuzzyRss)
+MAIL_FROM_EMAIL=noreply@example.com # Sender email (required for production)
 
 # SMTP (any SMTP provider)
 MAIL_SMTP_RELAY=smtp.example.com

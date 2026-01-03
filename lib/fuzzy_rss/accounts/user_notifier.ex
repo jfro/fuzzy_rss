@@ -6,10 +6,13 @@ defmodule FuzzyRss.Accounts.UserNotifier do
 
   # Delivers the email using the application mailer.
   defp deliver(recipient, subject, body) do
+    from_name = System.get_env("MAIL_FROM_NAME", "FuzzyRss")
+    from_email = System.get_env("MAIL_FROM_EMAIL", "noreply@example.com")
+
     email =
       new()
       |> to(recipient)
-      |> from({"FuzzyRss", "contact@example.com"})
+      |> from({from_name, from_email})
       |> subject(subject)
       |> text_body(body)
 

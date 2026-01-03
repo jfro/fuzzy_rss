@@ -43,3 +43,4 @@ npm-debug.log
 .env
 .env.local
 .env.*.local
+mise.local.toml
