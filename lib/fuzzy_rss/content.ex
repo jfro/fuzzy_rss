@@ -710,7 +710,8 @@ defmodule FuzzyRss.Content do
 
     entry_ids = query |> select([e], e.id) |> repo().all()
 
-    now = DateTime.utc_now()
+    now_utc = DateTime.utc_now() |> DateTime.truncate(:second)
+    now_naive = DateTime.to_naive(now_utc)
 
     repo().insert_all(
       UserEntryState,
@@ -719,9 +720,9 @@ defmodule FuzzyRss.Content do
           user_id: user.id,
           entry_id: entry_id,
           read: true,
-          read_at: now,
-          inserted_at: now,
-          updated_at: now
+          read_at: now_utc,
+          inserted_at: now_naive,
+          updated_at: now_naive
         }
       end),
       on_conflict: :replace_all,

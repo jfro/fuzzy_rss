@@ -318,4 +318,217 @@ defmodule FuzzyRssWeb.ReaderLiveTest do
       assert has_element?(view, "h1", "Test Entry to Preserve")
     end
   end
+
+  describe "Mark All as Read" do
+    test "marks all entries as read when no feed or folder is selected", %{conn: conn, user: user} do
+      # Create test data
+      feed = ContentFixtures.feed_fixture(%{"title" => "Test Feed"})
+      ContentFixtures.subscription_fixture(user, feed)
+
+      entry1 =
+        ContentFixtures.entry_fixture(feed, %{
+          "title" => "Unread Entry 1",
+          "summary" => "Test summary 1"
+        })
+
+      entry2 =
+        ContentFixtures.entry_fixture(feed, %{
+          "title" => "Unread Entry 2",
+          "summary" => "Test summary 2"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/app")
+
+      # Verify entries are unread
+      refute FuzzyRss.Content.get_entry_state(user, entry1.id)
+      refute FuzzyRss.Content.get_entry_state(user, entry2.id)
+
+      # Click mark all as read button
+      view |> element("button", "Mark All Read") |> render_click()
+
+      # Verify all entries are now marked as read
+      assert FuzzyRss.Content.get_entry_state(user, entry1.id).read
+      assert FuzzyRss.Content.get_entry_state(user, entry2.id).read
+    end
+
+    test "marks only feed entries as read when viewing a specific feed", %{
+      conn: conn,
+      user: user
+    } do
+      # Create two feeds with entries
+      feed1 = ContentFixtures.feed_fixture(%{"title" => "Feed 1"})
+      feed2 = ContentFixtures.feed_fixture(%{"title" => "Feed 2"})
+      ContentFixtures.subscription_fixture(user, feed1)
+      ContentFixtures.subscription_fixture(user, feed2)
+
+      entry1 = ContentFixtures.entry_fixture(feed1, %{"title" => "Feed 1 Entry"})
+      entry2 = ContentFixtures.entry_fixture(feed2, %{"title" => "Feed 2 Entry"})
+
+      # Navigate to feed1
+      {:ok, view, _html} = live(conn, ~p"/app?feed_id=#{feed1.id}")
+
+      # Click mark all as read
+      view |> element("button", "Mark All Read") |> render_click()
+
+      # Only feed1 entry should be marked as read
+      assert FuzzyRss.Content.get_entry_state(user, entry1.id).read
+      refute FuzzyRss.Content.get_entry_state(user, entry2.id)
+    end
+
+    test "marks only folder entries as read when viewing a specific folder", %{
+      conn: conn,
+      user: user
+    } do
+      # Create folder and feeds
+      {:ok, folder} = FuzzyRss.Content.create_folder(user, %{name: "Test Folder", slug: "test-folder"})
+
+      feed1 = ContentFixtures.feed_fixture(%{"title" => "Feed in Folder"})
+      feed2 = ContentFixtures.feed_fixture(%{"title" => "Feed Outside Folder"})
+
+      ContentFixtures.subscription_fixture(user, feed1, %{"folder_id" => folder.id})
+      ContentFixtures.subscription_fixture(user, feed2)
+
+      entry1 = ContentFixtures.entry_fixture(feed1, %{"title" => "Entry in Folder"})
+      entry2 = ContentFixtures.entry_fixture(feed2, %{"title" => "Entry Outside Folder"})
+
+      # Navigate to folder
+      {:ok, view, _html} = live(conn, ~p"/app?folder_id=#{folder.id}")
+
+      # Click mark all as read
+      view |> element("button", "Mark All Read") |> render_click()
+
+      # Only folder entry should be marked as read
+      assert FuzzyRss.Content.get_entry_state(user, entry1.id).read
+      refute FuzzyRss.Content.get_entry_state(user, entry2.id)
+    end
+
+    test "updates unread counts after marking all as read", %{conn: conn, user: user} do
+      # Create test data
+      feed = ContentFixtures.feed_fixture(%{"title" => "Test Feed"})
+      ContentFixtures.subscription_fixture(user, feed)
+
+      ContentFixtures.entry_fixture(feed, %{"title" => "Entry 1"})
+      ContentFixtures.entry_fixture(feed, %{"title" => "Entry 2"})
+
+      {:ok, view, _html} = live(conn, ~p"/app")
+
+      # Initial unread count should be 2
+      unread_counts = FuzzyRss.Content.get_unread_counts(user)
+      assert unread_counts[feed.id] == 2
+
+      # Click mark all as read
+      view |> element("button", "Mark All Read") |> render_click()
+
+      # Unread count should now be 0 (or nil if no unread entries)
+      unread_counts = FuzzyRss.Content.get_unread_counts(user)
+      assert Map.get(unread_counts, feed.id, 0) == 0
+    end
+  end
+
+  describe "Toggle Feed Filter" do
+    test "toggles from unread to all filter", %{conn: conn, user: user} do
+      # Create test data
+      feed = ContentFixtures.feed_fixture(%{"title" => "Test Feed"})
+      ContentFixtures.subscription_fixture(user, feed)
+
+      _entry1 = ContentFixtures.entry_fixture(feed, %{"title" => "Unread Entry"})
+
+      entry2 =
+        ContentFixtures.entry_fixture(feed, %{
+          "title" => "Read Entry",
+          "summary" => "Already read"
+        })
+
+      # Mark entry2 as read
+      FuzzyRss.Content.mark_as_read(user, entry2.id)
+
+      # Navigate to the feed (default filter is :unread)
+      {:ok, view, html} = live(conn, ~p"/app?feed_id=#{feed.id}")
+
+      # Should show unread filter and only unread entry
+      assert html =~ "📖 Unread"
+      assert html =~ "Unread Entry"
+      refute html =~ "Read Entry"
+
+      # Click toggle filter button
+      html = view |> element("button", "📖 Unread") |> render_click()
+
+      # Should now show all filter and both entries
+      assert html =~ "📋 All"
+      assert html =~ "Unread Entry"
+      assert html =~ "Read Entry"
+    end
+
+    test "toggles from all back to unread filter", %{conn: conn, user: user} do
+      # Create test data
+      feed = ContentFixtures.feed_fixture(%{"title" => "Test Feed"})
+      ContentFixtures.subscription_fixture(user, feed)
+
+      _entry1 = ContentFixtures.entry_fixture(feed, %{"title" => "Unread Entry"})
+
+      entry2 =
+        ContentFixtures.entry_fixture(feed, %{
+          "title" => "Read Entry",
+          "summary" => "Already read"
+        })
+
+      # Mark entry2 as read
+      FuzzyRss.Content.mark_as_read(user, entry2.id)
+
+      # Navigate to the feed
+      {:ok, view, _html} = live(conn, ~p"/app?feed_id=#{feed.id}")
+
+      # Toggle to all
+      view |> element("button", "📖 Unread") |> render_click()
+
+      # Toggle back to unread
+      html = view |> element("button", "📋 All") |> render_click()
+
+      # Should show only unread entry
+      assert html =~ "📖 Unread"
+      assert html =~ "Unread Entry"
+      refute html =~ "Read Entry"
+    end
+
+    test "toggle filter button only appears when viewing feed or folder", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/app")
+
+      # Should not show toggle button on main page
+      refute html =~ "toggle_feed_filter"
+    end
+
+    test "toggle filter works when viewing a folder", %{conn: conn, user: user} do
+      # Create folder and feed
+      {:ok, folder} = FuzzyRss.Content.create_folder(user, %{name: "Test Folder", slug: "test-folder"})
+      feed = ContentFixtures.feed_fixture(%{"title" => "Feed in Folder"})
+      ContentFixtures.subscription_fixture(user, feed, %{"folder_id" => folder.id})
+
+      _entry1 = ContentFixtures.entry_fixture(feed, %{"title" => "Unread Entry"})
+
+      entry2 =
+        ContentFixtures.entry_fixture(feed, %{
+          "title" => "Read Entry",
+          "summary" => "Already read"
+        })
+
+      # Mark entry2 as read
+      FuzzyRss.Content.mark_as_read(user, entry2.id)
+
+      # Navigate to the folder
+      {:ok, view, html} = live(conn, ~p"/app?folder_id=#{folder.id}")
+
+      # Should show unread filter and only unread entry
+      assert html =~ "📖 Unread"
+      assert html =~ "Unread Entry"
+      refute html =~ "Read Entry"
+
+      # Toggle to all
+      html = view |> element("button", "📖 Unread") |> render_click()
+
+      # Should show all entries
+      assert html =~ "📋 All"
+      assert html =~ "Unread Entry"
+      assert html =~ "Read Entry"
+    end
+  end
 end

@@ -210,6 +210,31 @@ defmodule FuzzyRssWeb.ReaderLive.Index do
   end
 
   @impl true
+  def handle_event("mark_all_read", _params, socket) do
+    opts = [
+      feed_id: socket.assigns.selected_feed,
+      folder_id: socket.assigns.selected_folder
+    ]
+
+    Content.mark_all_as_read(socket.assigns.current_user, opts)
+
+    socket
+    |> load_sidebar_data()
+    |> load_entries()
+    |> then(&{:noreply, &1})
+  end
+
+  @impl true
+  def handle_event("toggle_feed_filter", _params, socket) do
+    new_filter = if socket.assigns.filter == :unread, do: :all, else: :unread
+
+    socket
+    |> assign(:filter, new_filter)
+    |> load_entries()
+    |> then(&{:noreply, &1})
+  end
+
+  @impl true
   def handle_info({:feed_updated, _feed}, socket) do
     socket
     |> load_sidebar_data()
