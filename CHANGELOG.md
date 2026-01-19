@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.1.4 - 2026-01-19
+#### Bug Fixes
+- mark all as read failure - (6cfc3bd) - *jfro*
+
+- - -
+
 ## v0.1.3 - 2026-01-03
 #### Continuous Integration
 - fix changelog extraction for gh releases - (8783167) - *jfro*
