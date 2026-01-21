@@ -119,15 +119,18 @@ defmodule FuzzyRss.Api.GReader do
     default_tags = [
       %{
         id: "user/#{user_id}/state/com.google/reading-list",
-        sortid: "01"
+        sortid: "01",
+        type: "state"
       },
       %{
         id: "user/#{user_id}/state/com.google/starred",
-        sortid: "02"
+        sortid: "02",
+        type: "state"
       },
       %{
         id: "user/#{user_id}/state/com.google/read",
-        sortid: "03"
+        sortid: "03",
+        type: "state"
       }
     ]
 
@@ -135,7 +138,8 @@ defmodule FuzzyRss.Api.GReader do
       Enum.map(folders, fn folder ->
         %{
           id: "user/#{user_id}/label/#{folder.name}",
-          sortid: "A#{folder.id}"
+          sortid: "A#{String.pad_leading(to_string(folder.id), 8, "0")}",
+          type: "folder"
         }
       end)
 

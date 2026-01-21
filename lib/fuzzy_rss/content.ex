@@ -1116,7 +1116,7 @@ defmodule FuzzyRss.Content do
 
   defp apply_timestamp_filter(query, older_than, nil) when not is_nil(older_than) do
     timestamp = DateTime.from_unix!(older_than)
-    where(query, [e], e.published_at < ^timestamp)
+    where(query, [e], e.published_at > ^timestamp)
   end
 
   defp apply_timestamp_filter(query, nil, newer_than) when not is_nil(newer_than) do
@@ -1127,7 +1127,7 @@ defmodule FuzzyRss.Content do
   defp apply_timestamp_filter(query, older_than, newer_than) do
     older_timestamp = DateTime.from_unix!(older_than)
     newer_timestamp = DateTime.from_unix!(newer_than)
-    where(query, [e], e.published_at < ^older_timestamp and e.published_at > ^newer_timestamp)
+    where(query, [e], e.published_at > ^older_timestamp and e.published_at > ^newer_timestamp)
   end
 
   defp apply_order(query, :asc) do

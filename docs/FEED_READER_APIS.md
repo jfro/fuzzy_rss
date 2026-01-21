@@ -132,13 +132,15 @@ Full-featured API with subscription management. Uses multiple endpoints under `/
 ### Authentication Flow
 
 1. **ClientLogin:** `POST /accounts/ClientLogin`
-   - Params: `Email`, `Passwd`
+   - Params: `Email`, `Passwd` (Passwd should be the MD5 hash API password, same as Fever API)
    - Returns: `SID=...\nAuth=...` (newline-separated)
    - Store auth token, use in header: `Authorization: GoogleLogin auth={token}`
 
 2. **Session Token:** `GET /reader/api/0/token`
    - Returns 57-char token for state-changing requests
    - Pass as `T` parameter in POST requests
+
+**Note:** Both Fever and Google Reader APIs use the same API password (MD5 hash of `email:password`). This allows users without account passwords (magic link users) to use RSS reader apps.
 
 ### Endpoints
 

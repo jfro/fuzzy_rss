@@ -6,25 +6,42 @@ defmodule FuzzyRssWeb.Api.GReader.AuthController do
   @doc """
   POST /accounts/ClientLogin
 
-  Authenticates user with email and password, returns auth tokens.
+  Authenticates user with email and API password, returns auth tokens.
+  The client sends the plain-text password, which we hash and compare to stored hash.
   """
   def client_login(conn, %{"Email" => email, "Passwd" => password}) do
-    case Accounts.get_user_by_email_and_password(email, password) do
-      nil ->
+    # First try to get user by email
+    user = Accounts.get_user_by_email(email)
+
+    cond do
+      # User not found
+      is_nil(user) ->
         conn
         |> put_status(:forbidden)
         |> text("Error=BadAuthentication")
 
-      user ->
-        # Ensure user has API password set
-        user = ensure_api_password(user, password)
+      # User has no API password set
+      is_nil(user.api_password) ->
+        conn
+        |> put_status(:forbidden)
+        |> text("Error=BadAuthentication")
 
-        response = """
-        SID=#{user.api_password}
-        Auth=#{user.api_password}
-        """
+      # Hash the incoming password and verify it matches
+      true ->
+        hashed_password = :crypto.hash(:md5, "#{email}:#{password}") |> Base.encode16(case: :lower)
 
-        text(conn, response)
+        if user.api_password == hashed_password do
+          response = """
+          SID=#{user.api_password}
+          Auth=#{user.api_password}
+          """
+
+          text(conn, response)
+        else
+          conn
+          |> put_status(:forbidden)
+          |> text("Error=BadAuthentication")
+        end
     end
   end
 
@@ -66,12 +83,4 @@ defmodule FuzzyRssWeb.Api.GReader.AuthController do
     })
   end
 
-  # Private helpers
-
-  defp ensure_api_password(%{api_password: nil} = user, password) do
-    {:ok, user} = Accounts.set_api_password(user, password)
-    user
-  end
-
-  defp ensure_api_password(user, _password), do: user
 end

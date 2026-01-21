@@ -51,7 +51,7 @@ defmodule FuzzyRssWeb.Api.GReader.StreamController do
       item_refs = Enum.map(entries, fn entry ->
         %{
           id: IdConverter.to_long_item_id(entry.id),
-          directStreamIds: datetime_to_usec(entry.published_at || entry.inserted_at),
+          directStreamIds: ["feed/#{entry.feed.url}"],
           timestampUsec: datetime_to_usec(entry.published_at || entry.inserted_at)
         }
       end)
@@ -77,11 +77,14 @@ defmodule FuzzyRssWeb.Api.GReader.StreamController do
 
   Returns full entries for specific item IDs (supports all 3 ID formats).
   """
-  def batch_contents(conn, %{"i" => item_ids}) when is_list(item_ids) do
+  def batch_contents(conn, %{"i" => item_ids}) do
     user = conn.assigns.current_user
 
+    # Handle both single string and list of IDs
+    id_list = if is_list(item_ids), do: item_ids, else: [item_ids]
+
     # Parse all item IDs (supports decimal, hex, and long format)
-    entry_ids = Enum.flat_map(item_ids, fn id ->
+    entry_ids = Enum.flat_map(id_list, fn id ->
       case IdConverter.parse_item_id(id) do
         {:ok, entry_id} -> [entry_id]
         _ -> []
