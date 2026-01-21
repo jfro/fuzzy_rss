@@ -112,6 +112,7 @@ defmodule FuzzyRss.MixProject do
       # RSS & Feed Processing
       {:fast_rss, "~> 0.5"},
       {:oban, "~> 2.18"},
+      {:oban_web, "~> 2.10"},
       {:floki, "~> 0.36"},
       {:readability, "~> 0.12"},
       {:timex, "~> 3.7"}

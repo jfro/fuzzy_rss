@@ -2,6 +2,7 @@ defmodule FuzzyRssWeb.Router do
   use FuzzyRssWeb, :router
 
   import FuzzyRssWeb.UserAuth
+  import Oban.Web.Router
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -92,6 +93,9 @@ defmodule FuzzyRssWeb.Router do
       live "/settings", ReaderLive.Index, :settings
       live "/account-settings", ReaderLive.Index, :account_settings
     end
+
+    # Oban Web UI (outside live_session but still authenticated)
+    oban_dashboard("/oban")
   end
 
   scope "/", FuzzyRssWeb do

@@ -10,6 +10,9 @@ defmodule FuzzyRss.Application do
     # Configure database adapter at runtime based on DATABASE_ADAPTER env var
     configure_database_adapter()
 
+    # Attach Oban's default logger for job execution visibility
+    :ok = Oban.Telemetry.attach_default_logger(level: :info)
+
     # Get the selected repo module
     repo_module = Application.fetch_env!(:fuzzy_rss, :repo_module)
 
