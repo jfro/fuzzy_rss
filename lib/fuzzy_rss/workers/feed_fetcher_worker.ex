@@ -37,11 +37,31 @@ defmodule FuzzyRss.Workers.FeedFetcherWorker do
   defp save_entries(feed, entries) do
     require Logger
 
-    Enum.each(entries, fn entry_data ->
+    # Get existing GUIDs for this feed to avoid re-inserting
+    entry_guids = Enum.map(entries, & &1.guid)
+
+    existing_guids =
+      from(e in Entry,
+        where: e.feed_id == ^feed.id and e.guid in ^entry_guids,
+        select: e.guid
+      )
+      |> repo().all()
+      |> MapSet.new()
+
+    # Filter to only new entries
+    new_entries = Enum.reject(entries, fn entry -> MapSet.member?(existing_guids, entry.guid) end)
+
+    if length(new_entries) < length(entries) do
+      Logger.debug(
+        "FeedFetcherWorker: Skipping #{length(entries) - length(new_entries)} existing entries"
+      )
+    end
+
+    Enum.each(new_entries, fn entry_data ->
       try do
         case %Entry{}
              |> Entry.changeset(Map.put(entry_data, :feed_id, feed.id))
-             |> repo().insert(on_conflict: :replace_all, conflict_target: [:feed_id, :guid]) do
+             |> repo().insert() do
           {:ok, entry} ->
             Logger.debug("FeedFetcherWorker: Saved entry #{entry.id}: #{entry.title}")
 
