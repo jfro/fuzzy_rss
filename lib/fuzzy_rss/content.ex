@@ -194,6 +194,19 @@ defmodule FuzzyRss.Content do
   end
 
   @doc """
+  Gets a user's subscription by feed URL.
+  """
+  def get_user_subscription_by_url(user, feed_url) do
+    from(s in Subscription,
+      join: f in Feed,
+      on: s.feed_id == f.id,
+      where: s.user_id == ^user.id and f.url == ^feed_url,
+      preload: [:feed, :folder]
+    )
+    |> repo().one()
+  end
+
+  @doc """
   Gets a feed by ID.
   """
   def get_feed!(id) do
@@ -505,6 +518,13 @@ defmodule FuzzyRss.Content do
     repo().get_by(Folder, user_id: user.id, slug: slug)
   end
 
+  @doc """
+  Gets a user's folder by name.
+  """
+  def get_user_folder_by_name(user, name) do
+    repo().get_by(Folder, user_id: user.id, name: name)
+  end
+
   ## Entry queries
 
   @doc """
@@ -523,6 +543,10 @@ defmodule FuzzyRss.Content do
     feed_id = opts[:feed_id]
     limit = opts[:limit] || 50
     offset = opts[:offset] || 0
+    older_than = opts[:older_than]
+    newer_than = opts[:newer_than]
+    exclude_read = opts[:exclude_read]
+    order = opts[:order] || :desc
 
     query =
       from e in Entry,
@@ -531,12 +555,20 @@ defmodule FuzzyRss.Content do
         left_join: ues in UserEntryState,
         on: ues.entry_id == e.id and ues.user_id == ^user.id,
         where: s.user_id == ^user.id,
-        order_by: [desc: e.published_at],
         preload: [:feed]
 
     query = apply_entry_filter(query, filter)
     query = apply_folder_filter(query, folder_id)
     query = apply_feed_filter(query, feed_id)
+    query = apply_timestamp_filter(query, older_than, newer_than)
+    query = apply_order(query, order)
+
+    # If exclude_read is true, filter out read entries
+    query = if exclude_read do
+      where(query, [e, s, ues], is_nil(ues.id) or ues.read == false)
+    else
+      query
+    end
 
     # For starred filter, also include archived starred entries
     if filter == :starred && is_nil(feed_id) && is_nil(folder_id) do
@@ -598,6 +630,28 @@ defmodule FuzzyRss.Content do
   end
 
   @doc """
+  Counts unread entries for a user with optional feed_id or folder_id filters.
+  """
+  def count_unread_entries(user, opts \\ []) do
+    folder_id = opts[:folder_id]
+    feed_id = opts[:feed_id]
+
+    query =
+      from e in Entry,
+        join: s in Subscription,
+        on: s.feed_id == e.feed_id,
+        left_join: ues in UserEntryState,
+        on: ues.entry_id == e.id and ues.user_id == ^user.id,
+        where: s.user_id == ^user.id
+
+    query = apply_entry_filter(query, :unread)
+    query = apply_folder_filter(query, folder_id)
+    query = apply_feed_filter(query, feed_id)
+
+    repo().aggregate(query, :count, :id)
+  end
+
+  @doc """
   Searches entries for a user using database-specific full-text search.
   """
   def search_entries(user, search_query) do
@@ -619,6 +673,18 @@ defmodule FuzzyRss.Content do
   """
   def get_entry!(id) do
     repo().get!(Entry, id)
+  end
+
+  @doc """
+  Gets multiple entries by their IDs.
+  Returns entries with feed and user_entry_states preloaded.
+  """
+  def get_entries_by_ids(_user, entry_ids) when is_list(entry_ids) do
+    from(e in Entry,
+      where: e.id in ^entry_ids,
+      preload: [:feed, :user_entry_states]
+    )
+    |> repo().all()
   end
 
   @doc """
@@ -675,6 +741,14 @@ defmodule FuzzyRss.Content do
   end
 
   @doc """
+  Gets the user entry state for a specific entry.
+  Returns nil if the state doesn't exist.
+  """
+  def get_user_entry_state(user, entry_id) do
+    repo().get_by(UserEntryState, user_id: user.id, entry_id: entry_id)
+  end
+
+  @doc """
   Toggles the starred status of an entry for a user.
   """
   def toggle_starred(user, entry_id) do
@@ -705,10 +779,33 @@ defmodule FuzzyRss.Content do
   ## Options
   - `:feed_id` - Only mark entries from this feed as read
   - `:folder_id` - Only mark entries in this folder as read
+  - `:feed_url` - Only mark entries from feed with this URL as read
+  - `:folder_name` - Only mark entries in folder with this name as read
   """
   def mark_all_as_read(user, opts \\ []) do
-    feed_id = opts[:feed_id]
-    folder_id = opts[:folder_id]
+    # Resolve feed_url to feed_id if provided
+    feed_id =
+      cond do
+        opts[:feed_id] -> opts[:feed_id]
+        opts[:feed_url] ->
+          case repo().get_by(Feed, url: opts[:feed_url]) do
+            nil -> nil
+            feed -> feed.id
+          end
+        true -> nil
+      end
+
+    # Resolve folder_name to folder_id if provided
+    folder_id =
+      cond do
+        opts[:folder_id] -> opts[:folder_id]
+        opts[:folder_name] ->
+          case get_user_folder_by_name(user, opts[:folder_name]) do
+            nil -> nil
+            folder -> folder.id
+          end
+        true -> nil
+      end
 
     query =
       from e in Entry,
@@ -1013,6 +1110,32 @@ defmodule FuzzyRss.Content do
 
   defp apply_feed_filter(query, feed_id) do
     where(query, [e], e.feed_id == ^feed_id)
+  end
+
+  defp apply_timestamp_filter(query, nil, nil), do: query
+
+  defp apply_timestamp_filter(query, older_than, nil) when not is_nil(older_than) do
+    timestamp = DateTime.from_unix!(older_than)
+    where(query, [e], e.published_at < ^timestamp)
+  end
+
+  defp apply_timestamp_filter(query, nil, newer_than) when not is_nil(newer_than) do
+    timestamp = DateTime.from_unix!(newer_than)
+    where(query, [e], e.published_at > ^timestamp)
+  end
+
+  defp apply_timestamp_filter(query, older_than, newer_than) do
+    older_timestamp = DateTime.from_unix!(older_than)
+    newer_timestamp = DateTime.from_unix!(newer_than)
+    where(query, [e], e.published_at < ^older_timestamp and e.published_at > ^newer_timestamp)
+  end
+
+  defp apply_order(query, :asc) do
+    order_by(query, [e], asc: e.published_at)
+  end
+
+  defp apply_order(query, :desc) do
+    order_by(query, [e], desc: e.published_at)
   end
 
   defp search_where_clause(Ecto.Adapters.MyXQL, query) do

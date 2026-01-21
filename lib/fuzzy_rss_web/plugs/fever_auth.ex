@@ -18,7 +18,7 @@ defmodule FuzzyRssWeb.Plugs.FeverAuth do
     conn = fetch_query_params(conn)
 
     with api_key when not is_nil(api_key) <- conn.params["api_key"],
-         user when not is_nil(user) <- Accounts.get_user_by_fever_api_key(api_key) do
+         user when not is_nil(user) <- Accounts.get_user_by_api_password(api_key) do
       assign(conn, :current_user, user)
     else
       _ ->

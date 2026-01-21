@@ -395,50 +395,67 @@ defmodule FuzzyRss.AccountsTest do
     end
   end
 
-  describe "set_fever_api_key/2" do
+  describe "set_api_password/2" do
     test "sets the fever API key as MD5 hash of email:password" do
       user = user_fixture()
-      {:ok, updated_user} = Accounts.set_fever_api_key(user, "mypassword")
+      {:ok, updated_user} = Accounts.set_api_password(user, "mypassword")
 
       expected_hash =
         :crypto.hash(:md5, "#{user.email}:mypassword") |> Base.encode16(case: :lower)
 
-      assert updated_user.fever_api_key == expected_hash
+      assert updated_user.api_password == expected_hash
     end
 
     test "updates existing fever API key" do
       user = user_fixture()
-      {:ok, user} = Accounts.set_fever_api_key(user, "password1")
-      {:ok, updated_user} = Accounts.set_fever_api_key(user, "password2")
+      {:ok, user} = Accounts.set_api_password(user, "password1")
+      {:ok, updated_user} = Accounts.set_api_password(user, "password2")
 
       expected_hash =
         :crypto.hash(:md5, "#{user.email}:password2") |> Base.encode16(case: :lower)
 
-      assert updated_user.fever_api_key == expected_hash
+      assert updated_user.api_password == expected_hash
     end
 
     test "allows nil to clear fever API key" do
       user = user_fixture()
-      {:ok, user} = Accounts.set_fever_api_key(user, "password")
-      {:ok, updated_user} = Accounts.set_fever_api_key(user, nil)
+      {:ok, user} = Accounts.set_api_password(user, "password")
+      {:ok, updated_user} = Accounts.set_api_password(user, nil)
 
-      assert is_nil(updated_user.fever_api_key)
+      assert is_nil(updated_user.api_password)
     end
   end
 
-  describe "get_user_by_fever_api_key/1" do
+  describe "get_user_by_api_password/1" do
     test "returns user with valid fever API key" do
       user = user_fixture()
-      {:ok, user} = Accounts.set_fever_api_key(user, "testpass")
+      {:ok, user} = Accounts.set_api_password(user, "testpass")
 
       api_key = :crypto.hash(:md5, "#{user.email}:testpass") |> Base.encode16(case: :lower)
-      found_user = Accounts.get_user_by_fever_api_key(api_key)
+      found_user = Accounts.get_user_by_api_password(api_key)
 
       assert found_user.id == user.id
     end
 
     test "returns nil with invalid API key" do
-      assert is_nil(Accounts.get_user_by_fever_api_key("invalidkey"))
+      assert is_nil(Accounts.get_user_by_api_password("invalidkey"))
+    end
+  end
+
+  describe "generate_greader_session_token/0" do
+    test "generates a 57-character alphanumeric token" do
+      token = Accounts.generate_greader_session_token()
+
+      assert is_binary(token)
+      assert String.length(token) == 57
+      assert token =~ ~r/^[a-zA-Z0-9]+$/
+    end
+
+    test "generates unique tokens on each call" do
+      token1 = Accounts.generate_greader_session_token()
+      token2 = Accounts.generate_greader_session_token()
+
+      assert token1 != token2
     end
   end
 end

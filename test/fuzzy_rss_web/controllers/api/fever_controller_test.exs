@@ -8,7 +8,7 @@ defmodule FuzzyRssWeb.Api.FeverControllerTest do
 
   setup do
     user = user_fixture()
-    {:ok, user} = Accounts.set_fever_api_key(user, "testpass")
+    {:ok, user} = Accounts.set_api_password(user, "testpass")
     api_key = :crypto.hash(:md5, "#{user.email}:testpass") |> Base.encode16(case: :lower)
     %{user: user, api_key: api_key}
   end

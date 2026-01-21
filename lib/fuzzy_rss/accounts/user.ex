@@ -12,7 +12,7 @@ defmodule FuzzyRss.Accounts.User do
     # New fields
     field :preferences, :map, default: %{}
     field :api_token, :binary
-    field :fever_api_key, :string
+    field :api_password, :string
     field :timezone, :string, default: "UTC"
 
     # OIDC support

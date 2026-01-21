@@ -371,58 +371,95 @@ defmodule FuzzyRss.Accounts do
     |> repo().update()
   end
 
-  ## Fever API
+  ## API Authentication (Fever & Google Reader)
 
   @doc """
-  Sets the Fever API key for a user.
+  Sets the API password for a user.
 
-  The Fever API key is an MD5 hash of "email:password" where password is a
-  dedicated Fever password (not the user's account password).
+  The API password is an MD5 hash of "email:password" where password is a
+  dedicated API password (not the user's account password).
+
+  This is used by both the Fever API and Google Reader API for authentication.
 
   Returns `{:ok, user}` if successful.
 
   ## Examples
 
-      iex> set_fever_api_key(user, "my_fever_password")
+      iex> set_api_password(user, "my_api_password")
       {:ok, %User{}}
 
-      iex> set_fever_api_key(user, nil)
-      {:ok, %User{fever_api_key: nil}}
+      iex> set_api_password(user, nil)
+      {:ok, %User{api_password: nil}}
 
   """
-  def set_fever_api_key(user, password) when is_binary(password) do
+  def set_api_password(user, password) when is_binary(password) do
     api_key = :crypto.hash(:md5, "#{user.email}:#{password}") |> Base.encode16(case: :lower)
 
     user
-    |> Ecto.Changeset.change(%{fever_api_key: api_key})
+    |> Ecto.Changeset.change(%{api_password: api_key})
     |> repo().update()
   end
 
-  def set_fever_api_key(user, nil) do
+  def set_api_password(user, nil) do
     user
-    |> Ecto.Changeset.change(%{fever_api_key: nil})
+    |> Ecto.Changeset.change(%{api_password: nil})
     |> repo().update()
   end
 
   @doc """
-  Gets a user by their Fever API key.
+  Gets a user by their API password (hash).
 
-  Returns the user if the API key is valid, otherwise `nil`.
+  Used by both the Fever API and Google Reader API for authentication.
+  Returns the user if the API password is valid, otherwise `nil`.
 
   ## Examples
 
-      iex> get_user_by_fever_api_key("valid_api_key")
+      iex> get_user_by_api_password("valid_api_key")
       %User{}
 
-      iex> get_user_by_fever_api_key("invalid_key")
+      iex> get_user_by_api_password("invalid_key")
       nil
 
   """
-  def get_user_by_fever_api_key(api_key) when is_binary(api_key) do
-    repo().get_by(User, fever_api_key: api_key)
+  def get_user_by_api_password(api_key) when is_binary(api_key) do
+    repo().get_by(User, api_password: api_key)
   end
 
-  def get_user_by_fever_api_key(_), do: nil
+  def get_user_by_api_password(_), do: nil
+
+  @doc """
+  Generates a random session token for Google Reader API.
+
+  The session token is a 57-character alphanumeric string used for CSRF
+  protection in Google Reader API write operations. It is NOT persisted to
+  the database; instead, it should be stored in the user's session.
+
+  Returns a 57-character random alphanumeric string.
+
+  ## Examples
+
+      iex> token = generate_greader_session_token()
+      iex> String.length(token)
+      57
+
+  """
+  def generate_greader_session_token do
+    # Generate a 57-character alphanumeric token
+    # Use base62 encoding (alphanumeric only) to ensure consistent length
+    # Generate enough bytes to guarantee 57 characters
+    :crypto.strong_rand_bytes(50)
+    |> Base.encode64(padding: false)
+    |> String.replace(~r/[^a-zA-Z0-9]/, "")
+    |> then(fn token ->
+      # Ensure we have at least 57 chars by appending more if needed
+      if String.length(token) >= 57 do
+        String.slice(token, 0, 57)
+      else
+        # Recursively generate more to pad
+        token <> String.slice(generate_greader_session_token(), 0, 57 - String.length(token))
+      end
+    end)
+  end
 
   ## Token helper
 

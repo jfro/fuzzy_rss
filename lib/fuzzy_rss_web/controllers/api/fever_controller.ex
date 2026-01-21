@@ -17,6 +17,7 @@ defmodule FuzzyRssWeb.Api.FeverController do
 
   Write operations (POST):
   - mark=item&as=read&id=X
+  - mark=item&as=unread&id=X
   - mark=item&as=saved&id=X
   - mark=item&as=unsaved&id=X
   - mark=feed&as=read&id=X&before=timestamp
@@ -52,6 +53,9 @@ defmodule FuzzyRssWeb.Api.FeverController do
     case {mark, as_action} do
       {"item", "read"} ->
         parse_int(id, fn entry_id -> Content.mark_as_read(user, entry_id) end)
+
+      {"item", "unread"} ->
+        parse_int(id, fn entry_id -> Content.mark_as_unread(user, entry_id) end)
 
       {"item", "saved"} ->
         parse_int(id, fn entry_id -> Content.toggle_starred(user, entry_id) end)

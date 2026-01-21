@@ -46,6 +46,46 @@ defmodule FuzzyRssWeb.Router do
     post "/", FeverController, :index
   end
 
+  # Google Reader API (temporary routes for testing)
+  pipeline :greader_api do
+    plug :accepts, ["json", "html"]
+    plug :fetch_session
+    plug FuzzyRssWeb.Plugs.GReaderAuth
+  end
+
+  scope "/accounts", FuzzyRssWeb.Api.GReader do
+    pipe_through :api
+
+    post "/ClientLogin", AuthController, :client_login
+  end
+
+  scope "/reader/api/0", FuzzyRssWeb.Api.GReader, as: :greader do
+    pipe_through :greader_api
+
+    get "/token", AuthController, :token
+    get "/user-info", AuthController, :user_info
+
+    # Subscriptions
+    get "/subscription/list", SubscriptionController, :list
+    post "/subscription/quickadd", SubscriptionController, :quickadd
+    post "/subscription/edit", SubscriptionController, :edit
+
+    # Tags/Folders
+    get "/tag/list", TagController, :list
+    post "/rename-tag", TagController, :rename_tag
+    post "/disable-tag", TagController, :disable_tag
+
+    # Streams
+    get "/stream/contents/*stream_id", StreamController, :contents
+    get "/stream/items/ids", StreamController, :ids
+    post "/stream/items/contents", StreamController, :batch_contents
+    get "/unread-count", StreamController, :unread_count
+
+    # State
+    post "/edit-tag", StateController, :edit_tag
+    post "/mark-all-as-read", StateController, :mark_all_as_read
+  end
+
   # Other scopes may use custom stacks.
   # scope "/api", FuzzyRssWeb do
   #   pipe_through :api
