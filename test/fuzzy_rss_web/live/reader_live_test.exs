@@ -380,7 +380,8 @@ defmodule FuzzyRssWeb.ReaderLiveTest do
       user: user
     } do
       # Create folder and feeds
-      {:ok, folder} = FuzzyRss.Content.create_folder(user, %{name: "Test Folder", slug: "test-folder"})
+      {:ok, folder} =
+        FuzzyRss.Content.create_folder(user, %{name: "Test Folder", slug: "test-folder"})
 
       feed1 = ContentFixtures.feed_fixture(%{"title" => "Feed in Folder"})
       feed2 = ContentFixtures.feed_fixture(%{"title" => "Feed Outside Folder"})
@@ -499,7 +500,9 @@ defmodule FuzzyRssWeb.ReaderLiveTest do
 
     test "toggle filter works when viewing a folder", %{conn: conn, user: user} do
       # Create folder and feed
-      {:ok, folder} = FuzzyRss.Content.create_folder(user, %{name: "Test Folder", slug: "test-folder"})
+      {:ok, folder} =
+        FuzzyRss.Content.create_folder(user, %{name: "Test Folder", slug: "test-folder"})
+
       feed = ContentFixtures.feed_fixture(%{"title" => "Feed in Folder"})
       ContentFixtures.subscription_fixture(user, feed, %{"folder_id" => folder.id})
 

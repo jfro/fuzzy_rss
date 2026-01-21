@@ -371,6 +371,59 @@ defmodule FuzzyRss.Accounts do
     |> repo().update()
   end
 
+  ## Fever API
+
+  @doc """
+  Sets the Fever API key for a user.
+
+  The Fever API key is an MD5 hash of "email:password" where password is a
+  dedicated Fever password (not the user's account password).
+
+  Returns `{:ok, user}` if successful.
+
+  ## Examples
+
+      iex> set_fever_api_key(user, "my_fever_password")
+      {:ok, %User{}}
+
+      iex> set_fever_api_key(user, nil)
+      {:ok, %User{fever_api_key: nil}}
+
+  """
+  def set_fever_api_key(user, password) when is_binary(password) do
+    api_key = :crypto.hash(:md5, "#{user.email}:#{password}") |> Base.encode16(case: :lower)
+
+    user
+    |> Ecto.Changeset.change(%{fever_api_key: api_key})
+    |> repo().update()
+  end
+
+  def set_fever_api_key(user, nil) do
+    user
+    |> Ecto.Changeset.change(%{fever_api_key: nil})
+    |> repo().update()
+  end
+
+  @doc """
+  Gets a user by their Fever API key.
+
+  Returns the user if the API key is valid, otherwise `nil`.
+
+  ## Examples
+
+      iex> get_user_by_fever_api_key("valid_api_key")
+      %User{}
+
+      iex> get_user_by_fever_api_key("invalid_key")
+      nil
+
+  """
+  def get_user_by_fever_api_key(api_key) when is_binary(api_key) do
+    repo().get_by(User, fever_api_key: api_key)
+  end
+
+  def get_user_by_fever_api_key(_), do: nil
+
   ## Token helper
 
   defp update_user_and_delete_all_tokens(changeset) do

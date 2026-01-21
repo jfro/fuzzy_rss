@@ -19,6 +19,11 @@ defmodule FuzzyRssWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :fever_api do
+    plug :accepts, ["json", "html"]
+    plug FuzzyRssWeb.Plugs.FeverAuth
+  end
+
   scope "/auth", FuzzyRssWeb do
     pipe_through [:browser]
 
@@ -31,6 +36,14 @@ defmodule FuzzyRssWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :redirect_to_app
+  end
+
+  # Fever API
+  scope "/fever", FuzzyRssWeb.Api do
+    pipe_through :fever_api
+
+    get "/", FeverController, :index
+    post "/", FeverController, :index
   end
 
   # Other scopes may use custom stacks.

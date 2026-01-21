@@ -394,4 +394,51 @@ defmodule FuzzyRss.AccountsTest do
       refute inspect(%User{password: "123456"}) =~ "password: \"123456\""
     end
   end
+
+  describe "set_fever_api_key/2" do
+    test "sets the fever API key as MD5 hash of email:password" do
+      user = user_fixture()
+      {:ok, updated_user} = Accounts.set_fever_api_key(user, "mypassword")
+
+      expected_hash =
+        :crypto.hash(:md5, "#{user.email}:mypassword") |> Base.encode16(case: :lower)
+
+      assert updated_user.fever_api_key == expected_hash
+    end
+
+    test "updates existing fever API key" do
+      user = user_fixture()
+      {:ok, user} = Accounts.set_fever_api_key(user, "password1")
+      {:ok, updated_user} = Accounts.set_fever_api_key(user, "password2")
+
+      expected_hash =
+        :crypto.hash(:md5, "#{user.email}:password2") |> Base.encode16(case: :lower)
+
+      assert updated_user.fever_api_key == expected_hash
+    end
+
+    test "allows nil to clear fever API key" do
+      user = user_fixture()
+      {:ok, user} = Accounts.set_fever_api_key(user, "password")
+      {:ok, updated_user} = Accounts.set_fever_api_key(user, nil)
+
+      assert is_nil(updated_user.fever_api_key)
+    end
+  end
+
+  describe "get_user_by_fever_api_key/1" do
+    test "returns user with valid fever API key" do
+      user = user_fixture()
+      {:ok, user} = Accounts.set_fever_api_key(user, "testpass")
+
+      api_key = :crypto.hash(:md5, "#{user.email}:testpass") |> Base.encode16(case: :lower)
+      found_user = Accounts.get_user_by_fever_api_key(api_key)
+
+      assert found_user.id == user.id
+    end
+
+    test "returns nil with invalid API key" do
+      assert is_nil(Accounts.get_user_by_fever_api_key("invalidkey"))
+    end
+  end
 end

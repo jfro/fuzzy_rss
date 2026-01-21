@@ -23,6 +23,17 @@ defmodule FuzzyRss.Content do
   end
 
   @doc """
+  Lists all subscriptions for a user with preloaded feed and folder.
+  """
+  def list_subscriptions(user) do
+    from(s in Subscription,
+      where: s.user_id == ^user.id,
+      preload: [:feed, :folder]
+    )
+    |> repo().all()
+  end
+
+  @doc """
   Subscribes a user to a feed by URL.
   Creates the feed if it doesn't exist.
   """
@@ -209,10 +220,10 @@ defmodule FuzzyRss.Content do
         f.active == true and
           (is_nil(f.last_fetched_at) or
              fragment(
-               "? < ? - INTERVAL '1 MINUTE' * ?",
+               "? + (INTERVAL '1 MINUTE' * ?) < ?",
                f.last_fetched_at,
-               ^now,
-               f.fetch_interval
+               f.fetch_interval,
+               ^now
              )),
       limit: 100
     )
@@ -738,6 +749,20 @@ defmodule FuzzyRss.Content do
   end
 
   @doc """
+  Gets entry states for multiple entries at once (batch operation).
+
+  Returns a list of UserEntryState structs for the given entry IDs.
+  More efficient than calling get_entry_state/2 multiple times.
+  """
+  def get_entry_states(user, entry_ids) when is_list(entry_ids) do
+    from(ues in UserEntryState,
+      where: ues.user_id == ^user.id,
+      where: ues.entry_id in ^entry_ids
+    )
+    |> repo().all()
+  end
+
+  @doc """
   Deletes an archived starred entry.
   Use this when the entry ID is negative (indicating an archived entry).
   """
@@ -770,6 +795,200 @@ defmodule FuzzyRss.Content do
         |> UserEntryState.changeset(%{starred: false, starred_at: nil})
         |> repo().update()
     end
+  end
+
+  ## Fever API
+
+  @doc """
+  Lists entries for Fever API with pagination options.
+
+  ## Options
+
+    * `:since_id` - Return entries with ID greater than this value
+    * `:max_id` - Return entries with ID less than or equal to this value
+    * `:with_ids` - Comma-separated string of entry IDs to fetch
+    * `:limit` - Maximum number of entries to return (default: 50)
+
+  """
+  def list_fever_items(user, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 50)
+
+    base_query =
+      from(e in Entry,
+        join: s in Subscription,
+        on: s.feed_id == e.feed_id,
+        where: s.user_id == ^user.id,
+        order_by: [desc: e.id],
+        limit: ^limit,
+        preload: [:feed]
+      )
+
+    query =
+      cond do
+        ids_string = Keyword.get(opts, :with_ids) ->
+          # Parse comma-separated IDs
+          ids =
+            ids_string
+            |> String.split(",")
+            |> Enum.map(&String.trim/1)
+            |> Enum.map(&Integer.parse/1)
+            |> Enum.filter(fn
+              {_int, _} -> true
+              :error -> false
+            end)
+            |> Enum.map(fn {int, _} -> int end)
+
+          from(e in base_query, where: e.id in ^ids)
+
+        since_id = Keyword.get(opts, :since_id) ->
+          from(e in base_query, where: e.id > ^since_id)
+
+        max_id = Keyword.get(opts, :max_id) ->
+          from(e in base_query, where: e.id <= ^max_id)
+
+        true ->
+          base_query
+      end
+
+    repo().all(query)
+  end
+
+  @doc """
+  Returns comma-separated string of unread entry IDs for a user.
+  """
+  def get_unread_item_ids(user) do
+    query =
+      from(e in Entry,
+        join: s in Subscription,
+        on: s.feed_id == e.feed_id,
+        left_join: ues in UserEntryState,
+        on: ues.entry_id == e.id and ues.user_id == ^user.id,
+        where: s.user_id == ^user.id,
+        where: is_nil(ues.id) or ues.read == false,
+        select: e.id,
+        order_by: [asc: e.id]
+      )
+
+    repo().all(query)
+    |> Enum.map(&Integer.to_string/1)
+    |> Enum.join(",")
+  end
+
+  @doc """
+  Returns comma-separated string of starred entry IDs for a user.
+  """
+  def get_saved_item_ids(user) do
+    query =
+      from(e in Entry,
+        join: s in Subscription,
+        on: s.feed_id == e.feed_id,
+        join: ues in UserEntryState,
+        on: ues.entry_id == e.id and ues.user_id == ^user.id,
+        where: s.user_id == ^user.id,
+        where: ues.starred == true,
+        select: e.id,
+        order_by: [asc: e.id]
+      )
+
+    repo().all(query)
+    |> Enum.map(&Integer.to_string/1)
+    |> Enum.join(",")
+  end
+
+  @doc """
+  Marks all entries in a feed as read before a given Unix timestamp.
+
+  Returns `{:ok, count}` where count is the number of entries marked as read.
+  """
+  def mark_feed_read_before(user, feed_id, unix_timestamp) do
+    cutoff_datetime = DateTime.from_unix!(unix_timestamp)
+
+    # Get all entry IDs that need to be marked as read
+    entry_ids =
+      from(e in Entry,
+        join: s in Subscription,
+        on: s.feed_id == e.feed_id,
+        where: s.user_id == ^user.id,
+        where: e.feed_id == ^feed_id,
+        where: e.published_at < ^cutoff_datetime,
+        select: e.id
+      )
+      |> repo().all()
+
+    # Bulk insert/update user entry states
+    now_utc = DateTime.utc_now() |> DateTime.truncate(:second)
+    now_naive = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    states =
+      Enum.map(entry_ids, fn entry_id ->
+        %{
+          user_id: user.id,
+          entry_id: entry_id,
+          read: true,
+          read_at: now_utc,
+          starred: false,
+          inserted_at: now_naive,
+          updated_at: now_naive
+        }
+      end)
+
+    {count, _} =
+      repo().insert_all(
+        UserEntryState,
+        states,
+        on_conflict: {:replace, [:read, :read_at, :updated_at]},
+        conflict_target: [:user_id, :entry_id]
+      )
+
+    {:ok, count}
+  end
+
+  @doc """
+  Marks all entries in a folder as read before a given Unix timestamp.
+
+  Returns `{:ok, count}` where count is the number of entries marked as read.
+  """
+  def mark_folder_read_before(user, folder_id, unix_timestamp) do
+    cutoff_datetime = DateTime.from_unix!(unix_timestamp)
+
+    # Get all entry IDs in the folder that need to be marked as read
+    entry_ids =
+      from(e in Entry,
+        join: s in Subscription,
+        on: s.feed_id == e.feed_id,
+        where: s.user_id == ^user.id,
+        where: s.folder_id == ^folder_id,
+        where: e.published_at < ^cutoff_datetime,
+        select: e.id
+      )
+      |> repo().all()
+
+    # Bulk insert/update user entry states
+    now_utc = DateTime.utc_now() |> DateTime.truncate(:second)
+    now_naive = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    states =
+      Enum.map(entry_ids, fn entry_id ->
+        %{
+          user_id: user.id,
+          entry_id: entry_id,
+          read: true,
+          read_at: now_utc,
+          starred: false,
+          inserted_at: now_naive,
+          updated_at: now_naive
+        }
+      end)
+
+    {count, _} =
+      repo().insert_all(
+        UserEntryState,
+        states,
+        on_conflict: {:replace, [:read, :read_at, :updated_at]},
+        conflict_target: [:user_id, :entry_id]
+      )
+
+    {:ok, count}
   end
 
   ## Private helpers
