@@ -2,6 +2,18 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.2.0 - 2026-01-24
+#### Features
+- Google Reader API - (17b48f6) - *jfro*
+- Fever API (untested) - (282349f) - *jfro*
+#### Bug Fixes
+- reset scroll of article view on change - (f19e4ad) - *jfro*
+- Google Reader API compatibility and API password UI improvements - (0b127b8) - *jfro*
+- errors on parsing existing entries & trying to re-insert them - (5a947be) - *jfro*
+- feed scheduler worker with SQL error - (46068c6) - *jfro*
+
+- - -
+
 ## v0.1.4 - 2026-01-19
 #### Bug Fixes
 - mark all as read failure - (6cfc3bd) - *jfro*
