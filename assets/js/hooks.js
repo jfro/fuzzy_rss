@@ -10,3 +10,12 @@ export const FolderTree = {
     })
   }
 }
+
+export const ScrollReset = {
+  mounted() {
+    this.el.scrollTop = 0;
+  },
+  updated() {
+    this.el.scrollTop = 0;
+  }
+}

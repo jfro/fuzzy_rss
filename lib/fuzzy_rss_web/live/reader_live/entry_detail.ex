@@ -18,7 +18,11 @@ defmodule FuzzyRssWeb.ReaderLive.EntryDetail do
   @impl true
   def render(assigns) do
     ~H"""
-    <article class="flex-1 bg-base-100 overflow-y-auto border-l border-base-300 min-w-0">
+    <article
+      id={"entry-detail-#{if @selected_entry, do: @selected_entry.id, else: "none"}"}
+      phx-hook="ScrollReset"
+      class="flex-1 bg-base-100 overflow-y-auto border-l border-base-300 min-w-0"
+    >
       <%= if @selected_entry do %>
         <% is_starred = is_starred?(@selected_entry) %>
         <div class="p-6">
