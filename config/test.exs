@@ -34,3 +34,6 @@ config :phoenix, :plug_init_mode, :runtime
 # Enable helpful, but potentially expensive runtime checks
 config :phoenix_live_view,
   enable_expensive_runtime_checks: true
+
+# Disable Oban queues and plugins during tests to avoid sandbox connection issues
+config :fuzzy_rss, Oban, testing: :manual, queues: false, plugins: false

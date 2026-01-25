@@ -45,13 +45,13 @@ defmodule FuzzyRss.Api.GReader.IdConverter do
         |> String.replace_prefix(@long_item_prefix, "")
         |> parse_hex()
 
-      # Decimal format (all digits) - check this BEFORE hex
+      # Short hex format with leading zeros (16 chars padded) or contains A-F
+      String.match?(id, ~r/^0+[0-9A-Fa-f]+$/) or String.match?(id, ~r/^[0-9A-Fa-f]*[A-Fa-f][0-9A-Fa-f]*$/) ->
+        parse_hex(id)
+
+      # Decimal format (all digits, no leading zeros)
       String.match?(id, ~r/^\d+$/) ->
         parse_decimal(id)
-
-      # Short hex format (contains A-F, so must be hex)
-      String.match?(id, ~r/^[0-9A-Fa-f]+$/) ->
-        parse_hex(id)
 
       true ->
         {:error, :invalid_format}
