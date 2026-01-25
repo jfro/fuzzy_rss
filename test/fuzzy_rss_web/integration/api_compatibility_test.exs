@@ -49,10 +49,12 @@ defmodule FuzzyRssWeb.Integration.ApiCompatibilityTest do
 
       # Add feed via GReader
       feed_url = "https://example.com/crossapi-feed.xml"
-      greader_conn = post(greader_conn, "/reader/api/0/subscription/quickadd", %{
-        "quickadd" => feed_url,
-        "T" => session_token
-      })
+
+      greader_conn =
+        post(greader_conn, "/reader/api/0/subscription/quickadd", %{
+          "quickadd" => feed_url,
+          "T" => session_token
+        })
 
       assert json_response(greader_conn, 200)
 
@@ -96,17 +98,24 @@ defmodule FuzzyRssWeb.Integration.ApiCompatibilityTest do
       entry = entry_fixture(feed)
 
       # Mark as read via Fever
-      fever_conn = post(fever_conn, "/fever/?api&mark=item&as=read&id=#{entry.id}", %{
-        api_key: api_key
-      })
+      fever_conn =
+        post(fever_conn, "/fever/?api&mark=item&as=read&id=#{entry.id}", %{
+          api_key: api_key
+        })
+
       assert json_response(fever_conn, 200)
 
       # Verify read state in GReader
-      greader_conn = get(greader_conn, "/reader/api/0/stream/contents/user/-/state/com.google/reading-list")
+      greader_conn =
+        get(greader_conn, "/reader/api/0/stream/contents/user/-/state/com.google/reading-list")
+
       greader_json = json_response(greader_conn, 200)
 
       items = greader_json["items"]
-      item = Enum.find(items, fn i -> String.contains?(i["id"], Integer.to_string(entry.id, 16)) end)
+
+      item =
+        Enum.find(items, fn i -> String.contains?(i["id"], Integer.to_string(entry.id, 16)) end)
+
       assert item
       assert "user/#{user.id}/state/com.google/read" in item["categories"]
     end
@@ -128,11 +137,13 @@ defmodule FuzzyRssWeb.Integration.ApiCompatibilityTest do
       greader_conn = recycle(greader_conn) |> auth_conn(api_key)
 
       # Mark as read via GReader
-      greader_conn = post(greader_conn, "/reader/api/0/edit-tag", %{
-        "i" => "#{entry.id}",
-        "a" => "user/-/state/com.google/read",
-        "T" => session_token
-      })
+      greader_conn =
+        post(greader_conn, "/reader/api/0/edit-tag", %{
+          "i" => "#{entry.id}",
+          "a" => "user/-/state/com.google/read",
+          "T" => session_token
+        })
+
       assert text_response(greader_conn, 200) == "OK"
 
       # Verify read state in Fever
@@ -158,17 +169,24 @@ defmodule FuzzyRssWeb.Integration.ApiCompatibilityTest do
       Content.mark_as_read(user, entry.id)
 
       # Mark as unread via Fever
-      fever_conn = post(fever_conn, "/fever/?api&mark=item&as=unread&id=#{entry.id}", %{
-        api_key: api_key
-      })
+      fever_conn =
+        post(fever_conn, "/fever/?api&mark=item&as=unread&id=#{entry.id}", %{
+          api_key: api_key
+        })
+
       assert json_response(fever_conn, 200)
 
       # Verify unread state in GReader
-      greader_conn = get(greader_conn, "/reader/api/0/stream/contents/user/-/state/com.google/reading-list")
+      greader_conn =
+        get(greader_conn, "/reader/api/0/stream/contents/user/-/state/com.google/reading-list")
+
       greader_json = json_response(greader_conn, 200)
 
       items = greader_json["items"]
-      item = Enum.find(items, fn i -> String.contains?(i["id"], Integer.to_string(entry.id, 16)) end)
+
+      item =
+        Enum.find(items, fn i -> String.contains?(i["id"], Integer.to_string(entry.id, 16)) end)
+
       assert item
       refute "user/#{user.id}/state/com.google/read" in item["categories"]
     end
@@ -187,13 +205,17 @@ defmodule FuzzyRssWeb.Integration.ApiCompatibilityTest do
       entry = entry_fixture(feed)
 
       # Star via Fever
-      fever_conn = post(fever_conn, "/fever/?api&mark=item&as=saved&id=#{entry.id}", %{
-        api_key: api_key
-      })
+      fever_conn =
+        post(fever_conn, "/fever/?api&mark=item&as=saved&id=#{entry.id}", %{
+          api_key: api_key
+        })
+
       assert json_response(fever_conn, 200)
 
       # Verify starred in GReader
-      greader_conn = get(greader_conn, "/reader/api/0/stream/contents/user/-/state/com.google/starred")
+      greader_conn =
+        get(greader_conn, "/reader/api/0/stream/contents/user/-/state/com.google/starred")
+
       greader_json = json_response(greader_conn, 200)
 
       items = greader_json["items"]
@@ -218,11 +240,13 @@ defmodule FuzzyRssWeb.Integration.ApiCompatibilityTest do
       greader_conn = recycle(greader_conn) |> auth_conn(api_key)
 
       # Star via GReader
-      greader_conn = post(greader_conn, "/reader/api/0/edit-tag", %{
-        "i" => "#{entry.id}",
-        "a" => "user/-/state/com.google/starred",
-        "T" => session_token
-      })
+      greader_conn =
+        post(greader_conn, "/reader/api/0/edit-tag", %{
+          "i" => "#{entry.id}",
+          "a" => "user/-/state/com.google/starred",
+          "T" => session_token
+        })
+
       assert text_response(greader_conn, 200) == "OK"
 
       # Verify starred in Fever
@@ -303,9 +327,10 @@ defmodule FuzzyRssWeb.Integration.ApiCompatibilityTest do
 
       feeds_groups = fever_json["feeds_groups"]
       assert feeds_groups, "feeds_groups should be present in response"
+
       assert Enum.any?(feeds_groups, fn fg ->
-        fg["group_id"] == group["id"] && fg["feed_ids"] =~ Integer.to_string(feed.id)
-      end)
+               fg["group_id"] == group["id"] && fg["feed_ids"] =~ Integer.to_string(feed.id)
+             end)
     end
   end
 end

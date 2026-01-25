@@ -107,9 +107,10 @@ defmodule FuzzyRssWeb.Api.GReader.StreamControllerTest do
       _sub = subscription_fixture(user, feed)
 
       # Create entries with specific timestamps
-      entries = for i <- 1..5 do
-        entry_fixture(feed, %{title: "Entry #{i}"})
-      end
+      entries =
+        for i <- 1..5 do
+          entry_fixture(feed, %{title: "Entry #{i}"})
+        end
 
       # First request gets 3 items
       conn1 = get(conn, "/reader/api/0/stream/contents/user/-/state/com.google/reading-list?n=3")
@@ -118,7 +119,12 @@ defmodule FuzzyRssWeb.Api.GReader.StreamControllerTest do
 
       # If continuation token is present, use it
       if continuation = json1["continuation"] do
-        conn2 = get(conn, "/reader/api/0/stream/contents/user/-/state/com.google/reading-list?n=3&c=#{continuation}")
+        conn2 =
+          get(
+            conn,
+            "/reader/api/0/stream/contents/user/-/state/com.google/reading-list?n=3&c=#{continuation}"
+          )
+
         json2 = json_response(conn2, 200)
         assert length(json2["items"]) <= 2
       end
@@ -132,7 +138,11 @@ defmodule FuzzyRssWeb.Api.GReader.StreamControllerTest do
 
       Content.mark_as_read(user, entry1.id)
 
-      conn = get(conn, "/reader/api/0/stream/contents/user/-/state/com.google/reading-list?xt=user/-/state/com.google/read")
+      conn =
+        get(
+          conn,
+          "/reader/api/0/stream/contents/user/-/state/com.google/reading-list?xt=user/-/state/com.google/read"
+        )
 
       assert json = json_response(conn, 200)
       assert items = json["items"]
@@ -165,7 +175,7 @@ defmodule FuzzyRssWeb.Api.GReader.StreamControllerTest do
       # Each item ref should have id and timestamp
       Enum.each(item_refs, fn ref ->
         assert is_binary(ref["id"])
-        assert is_integer(ref["directStreamIds"])
+        assert is_list(ref["directStreamIds"])
       end)
     end
 
@@ -177,7 +187,8 @@ defmodule FuzzyRssWeb.Api.GReader.StreamControllerTest do
         entry_fixture(feed)
       end
 
-      conn = get(conn, "/reader/api/0/stream/items/ids?s=user/-/state/com.google/reading-list&n=3")
+      conn =
+        get(conn, "/reader/api/0/stream/items/ids?s=user/-/state/com.google/reading-list&n=3")
 
       assert json = json_response(conn, 200)
       assert item_refs = json["itemRefs"]
@@ -193,9 +204,10 @@ defmodule FuzzyRssWeb.Api.GReader.StreamControllerTest do
       entry2 = entry_fixture(feed, %{title: "Entry 2"})
 
       # Use decimal IDs
-      conn = post(conn, "/reader/api/0/stream/items/contents", %{
-        "i" => ["#{entry1.id}", "#{entry2.id}"]
-      })
+      conn =
+        post(conn, "/reader/api/0/stream/items/contents", %{
+          "i" => ["#{entry1.id}", "#{entry2.id}"]
+        })
 
       assert json = json_response(conn, 200)
       assert items = json["items"]
@@ -210,9 +222,10 @@ defmodule FuzzyRssWeb.Api.GReader.StreamControllerTest do
       # Convert to hex
       hex_id = Integer.to_string(entry.id, 16) |> String.pad_leading(16, "0")
 
-      conn = post(conn, "/reader/api/0/stream/items/contents", %{
-        "i" => [hex_id]
-      })
+      conn =
+        post(conn, "/reader/api/0/stream/items/contents", %{
+          "i" => [hex_id]
+        })
 
       assert json = json_response(conn, 200)
       assert items = json["items"]
@@ -229,9 +242,10 @@ defmodule FuzzyRssWeb.Api.GReader.StreamControllerTest do
       hex_id = Integer.to_string(entry.id, 16) |> String.pad_leading(16, "0")
       long_id = "tag:google.com,2005:reader/item/#{hex_id}"
 
-      conn = post(conn, "/reader/api/0/stream/items/contents", %{
-        "i" => [long_id]
-      })
+      conn =
+        post(conn, "/reader/api/0/stream/items/contents", %{
+          "i" => [long_id]
+        })
 
       assert json = json_response(conn, 200)
       assert items = json["items"]
@@ -240,9 +254,10 @@ defmodule FuzzyRssWeb.Api.GReader.StreamControllerTest do
     end
 
     test "returns empty list for non-existent IDs", %{conn: conn, user: user} do
-      conn = post(conn, "/reader/api/0/stream/items/contents", %{
-        "i" => ["999999", "888888"]
-      })
+      conn =
+        post(conn, "/reader/api/0/stream/items/contents", %{
+          "i" => ["999999", "888888"]
+        })
 
       assert json = json_response(conn, 200)
       assert json["items"] == []
@@ -270,7 +285,9 @@ defmodule FuzzyRssWeb.Api.GReader.StreamControllerTest do
       assert is_list(unreadcounts)
 
       # Should have counts for reading-list and both feeds
-      reading_list = Enum.find(unreadcounts, &(&1["id"] == "user/#{user.id}/state/com.google/reading-list"))
+      reading_list =
+        Enum.find(unreadcounts, &(&1["id"] == "user/#{user.id}/state/com.google/reading-list"))
+
       assert reading_list["count"] == 2
 
       feed1_count = Enum.find(unreadcounts, &(&1["id"] == "feed/https://example.com/feed1.xml"))
@@ -309,7 +326,9 @@ defmodule FuzzyRssWeb.Api.GReader.StreamControllerTest do
       assert json = json_response(conn, 200)
       assert unreadcounts = json["unreadcounts"]
 
-      reading_list = Enum.find(unreadcounts, &(&1["id"] == "user/#{user.id}/state/com.google/reading-list"))
+      reading_list =
+        Enum.find(unreadcounts, &(&1["id"] == "user/#{user.id}/state/com.google/reading-list"))
+
       assert reading_list["count"] == 0
     end
   end

@@ -46,7 +46,8 @@ defmodule FuzzyRss.Api.GReader.IdConverter do
         |> parse_hex()
 
       # Short hex format with leading zeros (16 chars padded) or contains A-F
-      String.match?(id, ~r/^0+[0-9A-Fa-f]+$/) or String.match?(id, ~r/^[0-9A-Fa-f]*[A-Fa-f][0-9A-Fa-f]*$/) ->
+      String.match?(id, ~r/^0+[0-9A-Fa-f]+$/) or
+          String.match?(id, ~r/^[0-9A-Fa-f]*[A-Fa-f][0-9A-Fa-f]*$/) ->
         parse_hex(id)
 
       # Decimal format (all digits, no leading zeros)

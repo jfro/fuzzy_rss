@@ -28,7 +28,8 @@ defmodule FuzzyRssWeb.Api.GReader.AuthController do
 
       # Hash the incoming password and verify it matches
       true ->
-        hashed_password = :crypto.hash(:md5, "#{email}:#{password}") |> Base.encode16(case: :lower)
+        hashed_password =
+          :crypto.hash(:md5, "#{email}:#{password}") |> Base.encode16(case: :lower)
 
         if user.api_password == hashed_password do
           response = """
@@ -82,5 +83,4 @@ defmodule FuzzyRssWeb.Api.GReader.AuthController do
       isMultiLoginEnabled: false
     })
   end
-
 end

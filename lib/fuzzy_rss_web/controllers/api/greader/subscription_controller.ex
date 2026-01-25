@@ -84,7 +84,9 @@ defmodule FuzzyRssWeb.Api.GReader.SubscriptionController do
 
   defp handle_edit_action("edit", user, feed_url, params) do
     case Content.get_user_subscription_by_url(user, feed_url) do
-      nil -> :ok
+      nil ->
+        :ok
+
       subscription ->
         folder_id = extract_folder_id(params["a"], user)
         Content.update_subscription(subscription, %{folder_id: folder_id})

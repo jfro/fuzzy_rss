@@ -13,7 +13,9 @@ defmodule FuzzyRss.Api.GReaderTest do
       feed = feed_fixture()
       folder = folder_fixture(user, %{name: "Tech"})
       subscription = subscription_fixture(user, feed, %{folder_id: folder.id})
-      subscription = Content.get_subscription!(subscription.id) |> repo().preload([:feed, :folder])
+
+      subscription =
+        Content.get_subscription!(subscription.id) |> repo().preload([:feed, :folder])
 
       result = GReader.format_subscription(subscription, subscription.folder, user.id)
 
@@ -110,13 +112,15 @@ defmodule FuzzyRss.Api.GReaderTest do
       user = user_fixture()
       feed = feed_fixture(%{site_url: "https://example.com"})
       _subscription = subscription_fixture(user, feed)
-      entry = entry_fixture(feed, %{
-        title: "Test Entry",
-        author: "John Doe",
-        url: "https://example.com/entry1",
-        content: "Entry content here",
-        summary: "Entry summary"
-      })
+
+      entry =
+        entry_fixture(feed, %{
+          title: "Test Entry",
+          author: "John Doe",
+          url: "https://example.com/entry1",
+          content: "Entry content here",
+          summary: "Entry summary"
+        })
 
       entry = Content.get_entry!(entry.id) |> repo().preload([:feed, :user_entry_states])
 
@@ -140,11 +144,11 @@ defmodule FuzzyRss.Api.GReaderTest do
 
   describe "format_unread_count/3" do
     test "formats unread count structure" do
-      result = GReader.format_unread_count("feed/https://example.com", 5, 1234567890)
+      result = GReader.format_unread_count("feed/https://example.com", 5, 1_234_567_890)
 
       assert result.id == "feed/https://example.com"
       assert result.count == 5
-      assert result.newestItemTimestampUsec == 1234567890
+      assert result.newestItemTimestampUsec == 1_234_567_890
     end
   end
 
@@ -157,7 +161,9 @@ defmodule FuzzyRss.Api.GReaderTest do
 
       assert length(result) == 3
 
-      reading_list = Enum.find(result, &(&1.id == "user/#{user.id}/state/com.google/reading-list"))
+      reading_list =
+        Enum.find(result, &(&1.id == "user/#{user.id}/state/com.google/reading-list"))
+
       assert reading_list.sortid == "01"
 
       starred = Enum.find(result, &(&1.id == "user/#{user.id}/state/com.google/starred"))

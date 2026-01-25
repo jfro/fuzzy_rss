@@ -13,7 +13,11 @@ defmodule FuzzyRssWeb.Plugs.GReaderAuthTest do
       %{user: user, api_key: api_key}
     end
 
-    test "authenticates user with valid Authorization header", %{conn: conn, user: user, api_key: api_key} do
+    test "authenticates user with valid Authorization header", %{
+      conn: conn,
+      user: user,
+      api_key: api_key
+    } do
       conn =
         conn
         |> put_req_header("authorization", "GoogleLogin auth=#{api_key}")

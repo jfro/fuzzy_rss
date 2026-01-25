@@ -30,7 +30,9 @@ defmodule FuzzyRssWeb.Api.GReader.TagControllerTest do
       assert length(tags) >= 3
 
       # Check default tags
-      reading_list = Enum.find(tags, &(&1["id"] == "user/#{user.id}/state/com.google/reading-list"))
+      reading_list =
+        Enum.find(tags, &(&1["id"] == "user/#{user.id}/state/com.google/reading-list"))
+
       assert reading_list["sortid"] == "01"
 
       starred = Enum.find(tags, &(&1["id"] == "user/#{user.id}/state/com.google/starred"))
@@ -64,7 +66,8 @@ defmodule FuzzyRssWeb.Api.GReader.TagControllerTest do
 
       assert json = json_response(conn, 200)
       assert tags = json["tags"]
-      assert length(tags) == 3  # Only default state tags
+      # Only default state tags
+      assert length(tags) == 3
     end
   end
 
@@ -77,11 +80,12 @@ defmodule FuzzyRssWeb.Api.GReader.TagControllerTest do
       session_token = text_response(conn, 200)
       conn = recycle(conn) |> auth_conn(api_key)
 
-      conn = post(conn, "/reader/api/0/rename-tag", %{
-        "s" => "user/#{user.id}/label/OldName",
-        "dest" => "user/#{user.id}/label/NewName",
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/rename-tag", %{
+          "s" => "user/#{user.id}/label/OldName",
+          "dest" => "user/#{user.id}/label/NewName",
+          "T" => session_token
+        })
 
       assert text_response(conn, 200) == "OK"
 
@@ -93,10 +97,11 @@ defmodule FuzzyRssWeb.Api.GReader.TagControllerTest do
     test "returns error without session token", %{conn: conn, user: user} do
       _folder = folder_fixture(user, %{name: "OldName"})
 
-      conn = post(conn, "/reader/api/0/rename-tag", %{
-        "s" => "user/#{user.id}/label/OldName",
-        "dest" => "user/#{user.id}/label/NewName"
-      })
+      conn =
+        post(conn, "/reader/api/0/rename-tag", %{
+          "s" => "user/#{user.id}/label/OldName",
+          "dest" => "user/#{user.id}/label/NewName"
+        })
 
       assert text_response(conn, 400) == "Error"
     end
@@ -106,11 +111,12 @@ defmodule FuzzyRssWeb.Api.GReader.TagControllerTest do
       session_token = text_response(conn, 200)
       conn = recycle(conn) |> auth_conn(api_key)
 
-      conn = post(conn, "/reader/api/0/rename-tag", %{
-        "s" => "user/#{user.id}/label/NonExistent",
-        "dest" => "user/#{user.id}/label/NewName",
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/rename-tag", %{
+          "s" => "user/#{user.id}/label/NonExistent",
+          "dest" => "user/#{user.id}/label/NewName",
+          "T" => session_token
+        })
 
       assert text_response(conn, 400) == "Error"
     end
@@ -120,18 +126,23 @@ defmodule FuzzyRssWeb.Api.GReader.TagControllerTest do
       session_token = text_response(conn, 200)
       conn = recycle(conn) |> auth_conn(api_key)
 
-      conn = post(conn, "/reader/api/0/rename-tag", %{
-        "s" => "invalid/stream/id",
-        "dest" => "user/-/label/NewName",
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/rename-tag", %{
+          "s" => "invalid/stream/id",
+          "dest" => "user/-/label/NewName",
+          "T" => session_token
+        })
 
       assert text_response(conn, 400) == "Error"
     end
   end
 
   describe "POST /reader/api/0/disable-tag" do
-    test "deletes a folder and moves subscriptions to root", %{conn: conn, user: user, api_key: api_key} do
+    test "deletes a folder and moves subscriptions to root", %{
+      conn: conn,
+      user: user,
+      api_key: api_key
+    } do
       folder = folder_fixture(user, %{name: "Tech"})
       feed = feed_fixture()
       sub = subscription_fixture(user, feed, %{folder_id: folder.id})
@@ -141,10 +152,11 @@ defmodule FuzzyRssWeb.Api.GReader.TagControllerTest do
       session_token = text_response(conn, 200)
       conn = recycle(conn) |> auth_conn(api_key)
 
-      conn = post(conn, "/reader/api/0/disable-tag", %{
-        "s" => "user/#{user.id}/label/Tech",
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/disable-tag", %{
+          "s" => "user/#{user.id}/label/Tech",
+          "T" => session_token
+        })
 
       assert text_response(conn, 200) == "OK"
 
@@ -163,10 +175,11 @@ defmodule FuzzyRssWeb.Api.GReader.TagControllerTest do
       session_token = text_response(conn, 200)
       conn = recycle(conn) |> auth_conn(api_key)
 
-      conn = post(conn, "/reader/api/0/disable-tag", %{
-        "s" => "user/#{user.id}/label/NonExistent",
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/disable-tag", %{
+          "s" => "user/#{user.id}/label/NonExistent",
+          "T" => session_token
+        })
 
       assert text_response(conn, 200) == "OK"
     end
@@ -174,9 +187,10 @@ defmodule FuzzyRssWeb.Api.GReader.TagControllerTest do
     test "returns error without session token", %{conn: conn, user: user} do
       _folder = folder_fixture(user, %{name: "Tech"})
 
-      conn = post(conn, "/reader/api/0/disable-tag", %{
-        "s" => "user/#{user.id}/label/Tech"
-      })
+      conn =
+        post(conn, "/reader/api/0/disable-tag", %{
+          "s" => "user/#{user.id}/label/Tech"
+        })
 
       assert text_response(conn, 400) == "Error"
     end
@@ -186,10 +200,11 @@ defmodule FuzzyRssWeb.Api.GReader.TagControllerTest do
       session_token = text_response(conn, 200)
       conn = recycle(conn) |> auth_conn(api_key)
 
-      conn = post(conn, "/reader/api/0/disable-tag", %{
-        "s" => "invalid/stream/id",
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/disable-tag", %{
+          "s" => "invalid/stream/id",
+          "T" => session_token
+        })
 
       assert text_response(conn, 400) == "Error"
     end

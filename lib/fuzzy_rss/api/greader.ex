@@ -26,10 +26,12 @@ defmodule FuzzyRss.Api.GReader do
 
     categories =
       if folder do
-        [%{
-          id: "user/#{user_id}/label/#{folder.name}",
-          label: folder.name
-        }]
+        [
+          %{
+            id: "user/#{user_id}/label/#{folder.name}",
+            label: folder.name
+          }
+        ]
       else
         []
       end
@@ -165,6 +167,7 @@ defmodule FuzzyRss.Api.GReader do
 
   defp datetime_to_msec(nil), do: DateTime.to_unix(DateTime.utc_now(), :millisecond)
   defp datetime_to_msec(%DateTime{} = dt), do: DateTime.to_unix(dt, :millisecond)
+
   defp datetime_to_msec(%NaiveDateTime{} = ndt) do
     ndt
     |> DateTime.from_naive!("Etc/UTC")
@@ -173,6 +176,7 @@ defmodule FuzzyRss.Api.GReader do
 
   defp datetime_to_usec(nil), do: DateTime.to_unix(DateTime.utc_now(), :microsecond)
   defp datetime_to_usec(%DateTime{} = dt), do: DateTime.to_unix(dt, :microsecond)
+
   defp datetime_to_usec(%NaiveDateTime{} = ndt) do
     ndt
     |> DateTime.from_naive!("Etc/UTC")

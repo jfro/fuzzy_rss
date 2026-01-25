@@ -48,13 +48,14 @@ defmodule FuzzyRssWeb.Api.GReader.StreamController do
       opts = build_query_opts(params)
       entries = fetch_stream_entries(user, stream_type, opts)
 
-      item_refs = Enum.map(entries, fn entry ->
-        %{
-          id: IdConverter.to_long_item_id(entry.id),
-          directStreamIds: ["feed/#{entry.feed.url}"],
-          timestampUsec: datetime_to_usec(entry.published_at || entry.inserted_at)
-        }
-      end)
+      item_refs =
+        Enum.map(entries, fn entry ->
+          %{
+            id: IdConverter.to_long_item_id(entry.id),
+            directStreamIds: ["feed/#{entry.feed.url}"],
+            timestampUsec: datetime_to_usec(entry.published_at || entry.inserted_at)
+          }
+        end)
 
       response = %{
         itemRefs: item_refs
@@ -84,12 +85,13 @@ defmodule FuzzyRssWeb.Api.GReader.StreamController do
     id_list = if is_list(item_ids), do: item_ids, else: [item_ids]
 
     # Parse all item IDs (supports decimal, hex, and long format)
-    entry_ids = Enum.flat_map(id_list, fn id ->
-      case IdConverter.parse_item_id(id) do
-        {:ok, entry_id} -> [entry_id]
-        _ -> []
-      end
-    end)
+    entry_ids =
+      Enum.flat_map(id_list, fn id ->
+        case IdConverter.parse_item_id(id) do
+          {:ok, entry_id} -> [entry_id]
+          _ -> []
+        end
+      end)
 
     entries = Content.get_entries_by_ids(user, entry_ids)
     items = Enum.map(entries, &GReader.format_item(&1, user))
@@ -117,27 +119,39 @@ defmodule FuzzyRssWeb.Api.GReader.StreamController do
 
     # Reading list total (all unread)
     total_unread = calculate_total_unread(user, subscriptions)
-    reading_list_count = GReader.format_unread_count(
-      "user/#{user.id}/state/com.google/reading-list",
-      total_unread,
-      DateTime.to_unix(DateTime.utc_now(), :microsecond)
-    )
+
+    reading_list_count =
+      GReader.format_unread_count(
+        "user/#{user.id}/state/com.google/reading-list",
+        total_unread,
+        DateTime.to_unix(DateTime.utc_now(), :microsecond)
+      )
+
     unreadcounts = [reading_list_count | unreadcounts]
 
     # Per-feed counts
-    feed_counts = Enum.map(subscriptions, fn sub ->
-      unread = Content.count_unread_entries(user, feed_id: sub.feed_id)
-      newest_timestamp = get_newest_timestamp(user, feed_id: sub.feed_id)
-      GReader.format_unread_count("feed/#{sub.feed.url}", unread, newest_timestamp)
-    end)
+    feed_counts =
+      Enum.map(subscriptions, fn sub ->
+        unread = Content.count_unread_entries(user, feed_id: sub.feed_id)
+        newest_timestamp = get_newest_timestamp(user, feed_id: sub.feed_id)
+        GReader.format_unread_count("feed/#{sub.feed.url}", unread, newest_timestamp)
+      end)
+
     unreadcounts = unreadcounts ++ feed_counts
 
     # Per-folder counts
-    folder_counts = Enum.map(folders, fn folder ->
-      unread = Content.count_unread_entries(user, folder_id: folder.id)
-      newest_timestamp = get_newest_timestamp(user, folder_id: folder.id)
-      GReader.format_unread_count("user/#{user.id}/label/#{folder.name}", unread, newest_timestamp)
-    end)
+    folder_counts =
+      Enum.map(folders, fn folder ->
+        unread = Content.count_unread_entries(user, folder_id: folder.id)
+        newest_timestamp = get_newest_timestamp(user, folder_id: folder.id)
+
+        GReader.format_unread_count(
+          "user/#{user.id}/label/#{folder.name}",
+          unread,
+          newest_timestamp
+        )
+      end)
+
     unreadcounts = unreadcounts ++ folder_counts
 
     json(conn, %{max: 1000, unreadcounts: unreadcounts})
@@ -152,15 +166,17 @@ defmodule FuzzyRssWeb.Api.GReader.StreamController do
     case parts do
       ["feed" | url_parts] ->
         # Reconstruct URL from split parts
-        url = case url_parts do
-          # With empty string (shouldn't happen with Phoenix but handle it)
-          ["https:", "" | rest] -> "https://" <> Enum.join(rest, "/")
-          ["http:", "" | rest] -> "http://" <> Enum.join(rest, "/")
-          # Without empty string (Phoenix trims them)
-          ["https:" | rest] -> "https://" <> Enum.join(rest, "/")
-          ["http:" | rest] -> "http://" <> Enum.join(rest, "/")
-          _ -> Enum.join(url_parts, "/")
-        end
+        url =
+          case url_parts do
+            # With empty string (shouldn't happen with Phoenix but handle it)
+            ["https:", "" | rest] -> "https://" <> Enum.join(rest, "/")
+            ["http:", "" | rest] -> "http://" <> Enum.join(rest, "/")
+            # Without empty string (Phoenix trims them)
+            ["https:" | rest] -> "https://" <> Enum.join(rest, "/")
+            ["http:" | rest] -> "http://" <> Enum.join(rest, "/")
+            _ -> Enum.join(url_parts, "/")
+          end
+
         "feed/#{url}"
 
       _ ->
@@ -176,36 +192,41 @@ defmodule FuzzyRssWeb.Api.GReader.StreamController do
     opts = if n = params["n"], do: Keyword.put(opts, :limit, String.to_integer(n)), else: opts
 
     # Older than timestamp (ot parameter) - in seconds
-    opts = if ot = params["ot"], do: Keyword.put(opts, :older_than, String.to_integer(ot)), else: opts
+    opts =
+      if ot = params["ot"], do: Keyword.put(opts, :older_than, String.to_integer(ot)), else: opts
 
     # Newer than timestamp (nt parameter) - in seconds
-    opts = if nt = params["nt"], do: Keyword.put(opts, :newer_than, String.to_integer(nt)), else: opts
+    opts =
+      if nt = params["nt"], do: Keyword.put(opts, :newer_than, String.to_integer(nt)), else: opts
 
     # Exclude target (xt parameter) - e.g., "user/-/state/com.google/read"
-    opts = if xt = params["xt"] do
-      case IdConverter.parse_stream_id(xt) do
-        {:ok, :read} -> Keyword.put(opts, :exclude_read, true)
-        _ -> opts
+    opts =
+      if xt = params["xt"] do
+        case IdConverter.parse_stream_id(xt) do
+          {:ok, :read} -> Keyword.put(opts, :exclude_read, true)
+          _ -> opts
+        end
+      else
+        opts
       end
-    else
-      opts
-    end
 
     # Reverse order (r parameter)
     opts = if params["r"] == "o", do: Keyword.put(opts, :order, :asc), else: opts
 
     # Continuation token (c parameter) - encoded as timestamp in microseconds
     # Use it as older_than filter if not already specified
-    opts = if c = params["c"] do
-      timestamp_sec = String.to_integer(c) |> div(1_000_000)
-      if Keyword.has_key?(opts, :older_than) do
-        opts
+    opts =
+      if c = params["c"] do
+        timestamp_sec = String.to_integer(c) |> div(1_000_000)
+
+        if Keyword.has_key?(opts, :older_than) do
+          opts
+        else
+          Keyword.put(opts, :older_than, timestamp_sec)
+        end
       else
-        Keyword.put(opts, :older_than, timestamp_sec)
+        opts
       end
-    else
-      opts
-    end
 
     opts
   end
@@ -229,8 +250,11 @@ defmodule FuzzyRssWeb.Api.GReader.StreamController do
 
       {:feed, feed_url} ->
         case Content.get_user_subscription_by_url(user, feed_url) do
-          nil -> []
-          subscription -> Content.list_entries(user, Keyword.put(opts, :feed_id, subscription.feed_id))
+          nil ->
+            []
+
+          subscription ->
+            Content.list_entries(user, Keyword.put(opts, :feed_id, subscription.feed_id))
         end
     end
   end
@@ -251,8 +275,10 @@ defmodule FuzzyRssWeb.Api.GReader.StreamController do
     if length(entries) == limit do
       # Create continuation token from last entry timestamp
       last_entry = List.last(entries)
-      continuation = datetime_to_usec(last_entry.published_at || last_entry.inserted_at)
-                     |> Integer.to_string()
+
+      continuation =
+        datetime_to_usec(last_entry.published_at || last_entry.inserted_at)
+        |> Integer.to_string()
 
       Map.put(response, :continuation, continuation)
     else

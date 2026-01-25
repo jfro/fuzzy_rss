@@ -32,11 +32,12 @@ defmodule FuzzyRssWeb.Api.GReader.StateControllerTest do
       session_token = text_response(conn, 200)
       conn = recycle(conn) |> auth_conn(api_key)
 
-      conn = post(conn, "/reader/api/0/edit-tag", %{
-        "i" => "#{entry.id}",
-        "a" => "user/-/state/com.google/read",
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/edit-tag", %{
+          "i" => "#{entry.id}",
+          "a" => "user/-/state/com.google/read",
+          "T" => session_token
+        })
 
       assert text_response(conn, 200) == "OK"
 
@@ -59,11 +60,12 @@ defmodule FuzzyRssWeb.Api.GReader.StateControllerTest do
       conn = recycle(conn) |> auth_conn(api_key)
 
       # Mark as unread
-      conn = post(conn, "/reader/api/0/edit-tag", %{
-        "i" => "#{entry.id}",
-        "r" => "user/-/state/com.google/read",
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/edit-tag", %{
+          "i" => "#{entry.id}",
+          "r" => "user/-/state/com.google/read",
+          "T" => session_token
+        })
 
       assert text_response(conn, 200) == "OK"
 
@@ -85,11 +87,12 @@ defmodule FuzzyRssWeb.Api.GReader.StateControllerTest do
       conn = recycle(conn) |> auth_conn(api_key)
 
       # Mark multiple entries as read
-      conn = post(conn, "/reader/api/0/edit-tag", %{
-        "i" => ["#{entry1.id}", "#{entry2.id}", "#{entry3.id}"],
-        "a" => "user/-/state/com.google/read",
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/edit-tag", %{
+          "i" => ["#{entry1.id}", "#{entry2.id}", "#{entry3.id}"],
+          "a" => "user/-/state/com.google/read",
+          "T" => session_token
+        })
 
       assert text_response(conn, 200) == "OK"
 
@@ -111,11 +114,12 @@ defmodule FuzzyRssWeb.Api.GReader.StateControllerTest do
       session_token = text_response(conn, 200)
       conn = recycle(conn) |> auth_conn(api_key)
 
-      conn = post(conn, "/reader/api/0/edit-tag", %{
-        "i" => hex_id,
-        "a" => "user/-/state/com.google/read",
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/edit-tag", %{
+          "i" => hex_id,
+          "a" => "user/-/state/com.google/read",
+          "T" => session_token
+        })
 
       assert text_response(conn, 200) == "OK"
       assert Content.get_user_entry_state(user, entry.id).read == true
@@ -134,11 +138,12 @@ defmodule FuzzyRssWeb.Api.GReader.StateControllerTest do
       session_token = text_response(conn, 200)
       conn = recycle(conn) |> auth_conn(api_key)
 
-      conn = post(conn, "/reader/api/0/edit-tag", %{
-        "i" => long_id,
-        "a" => "user/-/state/com.google/read",
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/edit-tag", %{
+          "i" => long_id,
+          "a" => "user/-/state/com.google/read",
+          "T" => session_token
+        })
 
       assert text_response(conn, 200) == "OK"
       assert Content.get_user_entry_state(user, entry.id).read == true
@@ -149,10 +154,11 @@ defmodule FuzzyRssWeb.Api.GReader.StateControllerTest do
       _sub = subscription_fixture(user, feed)
       entry = entry_fixture(feed)
 
-      conn = post(conn, "/reader/api/0/edit-tag", %{
-        "i" => "#{entry.id}",
-        "a" => "user/-/state/com.google/read"
-      })
+      conn =
+        post(conn, "/reader/api/0/edit-tag", %{
+          "i" => "#{entry.id}",
+          "a" => "user/-/state/com.google/read"
+        })
 
       assert text_response(conn, 400) == "Error"
     end
@@ -169,11 +175,12 @@ defmodule FuzzyRssWeb.Api.GReader.StateControllerTest do
       session_token = text_response(conn, 200)
       conn = recycle(conn) |> auth_conn(api_key)
 
-      conn = post(conn, "/reader/api/0/edit-tag", %{
-        "i" => "#{entry.id}",
-        "a" => "user/-/state/com.google/starred",
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/edit-tag", %{
+          "i" => "#{entry.id}",
+          "a" => "user/-/state/com.google/starred",
+          "T" => session_token
+        })
 
       assert text_response(conn, 200) == "OK"
 
@@ -196,11 +203,12 @@ defmodule FuzzyRssWeb.Api.GReader.StateControllerTest do
       conn = recycle(conn) |> auth_conn(api_key)
 
       # Unstar
-      conn = post(conn, "/reader/api/0/edit-tag", %{
-        "i" => "#{entry.id}",
-        "r" => "user/-/state/com.google/starred",
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/edit-tag", %{
+          "i" => "#{entry.id}",
+          "r" => "user/-/state/com.google/starred",
+          "T" => session_token
+        })
 
       assert text_response(conn, 200) == "OK"
 
@@ -220,11 +228,12 @@ defmodule FuzzyRssWeb.Api.GReader.StateControllerTest do
       conn = recycle(conn) |> auth_conn(api_key)
 
       # Mark as both read and starred
-      conn = post(conn, "/reader/api/0/edit-tag", %{
-        "i" => "#{entry.id}",
-        "a" => ["user/-/state/com.google/read", "user/-/state/com.google/starred"],
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/edit-tag", %{
+          "i" => "#{entry.id}",
+          "a" => ["user/-/state/com.google/read", "user/-/state/com.google/starred"],
+          "T" => session_token
+        })
 
       assert text_response(conn, 200) == "OK"
 
@@ -249,10 +258,11 @@ defmodule FuzzyRssWeb.Api.GReader.StateControllerTest do
       conn = recycle(conn) |> auth_conn(api_key)
 
       # Mark all as read
-      conn = post(conn, "/reader/api/0/mark-all-as-read", %{
-        "s" => "user/-/state/com.google/reading-list",
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/mark-all-as-read", %{
+          "s" => "user/-/state/com.google/reading-list",
+          "T" => session_token
+        })
 
       assert text_response(conn, 200) == "OK"
 
@@ -277,10 +287,11 @@ defmodule FuzzyRssWeb.Api.GReader.StateControllerTest do
       conn = recycle(conn) |> auth_conn(api_key)
 
       # Mark all in feed1 as read
-      conn = post(conn, "/reader/api/0/mark-all-as-read", %{
-        "s" => "feed/https://example.com/feed1.xml",
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/mark-all-as-read", %{
+          "s" => "feed/https://example.com/feed1.xml",
+          "T" => session_token
+        })
 
       assert text_response(conn, 200) == "OK"
 
@@ -305,10 +316,11 @@ defmodule FuzzyRssWeb.Api.GReader.StateControllerTest do
       conn = recycle(conn) |> auth_conn(api_key)
 
       # Mark all in folder as read
-      conn = post(conn, "/reader/api/0/mark-all-as-read", %{
-        "s" => "user/-/label/Tech",
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/mark-all-as-read", %{
+          "s" => "user/-/label/Tech",
+          "T" => session_token
+        })
 
       assert text_response(conn, 200) == "OK"
 
@@ -318,9 +330,10 @@ defmodule FuzzyRssWeb.Api.GReader.StateControllerTest do
     end
 
     test "returns error without session token", %{conn: conn} do
-      conn = post(conn, "/reader/api/0/mark-all-as-read", %{
-        "s" => "user/-/state/com.google/reading-list"
-      })
+      conn =
+        post(conn, "/reader/api/0/mark-all-as-read", %{
+          "s" => "user/-/state/com.google/reading-list"
+        })
 
       assert text_response(conn, 400) == "Error"
     end

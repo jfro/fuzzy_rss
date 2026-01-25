@@ -7,8 +7,8 @@ defmodule FuzzyRssWeb.Api.GReader.AuthControllerTest do
   describe "POST /accounts/ClientLogin" do
     test "returns SID and Auth tokens for valid credentials", %{conn: conn} do
       user = user_fixture()
-      # Set password for the user
-      {:ok, {user, _}} = Accounts.update_user_password(user, %{password: "validpassword123"})
+      # Set API password for the user
+      {:ok, user} = Accounts.set_api_password(user, "validpassword123")
 
       conn =
         post(conn, "/accounts/ClientLogin", %{
@@ -32,12 +32,13 @@ defmodule FuzzyRssWeb.Api.GReader.AuthControllerTest do
       sid_token = String.replace_prefix(sid_line, "SID=", "")
       auth_token = String.replace_prefix(auth_line, "Auth=", "")
       assert sid_token == auth_token
-      assert String.length(sid_token) == 32  # MD5 hash length
+      # MD5 hash length
+      assert String.length(sid_token) == 32
     end
 
     test "returns 403 with Error=BadAuthentication for invalid password", %{conn: conn} do
       user = user_fixture()
-      {:ok, {user, _}} = Accounts.update_user_password(user, %{password: "validpassword123"})
+      {:ok, user} = Accounts.set_api_password(user, "validpassword123")
 
       conn =
         post(conn, "/accounts/ClientLogin", %{

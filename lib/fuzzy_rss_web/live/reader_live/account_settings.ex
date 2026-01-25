@@ -181,8 +181,8 @@ defmodule FuzzyRssWeb.ReaderLive.AccountSettings do
       </div>
 
       <div class="divider"></div>
-
-      <!-- API Password Section -->
+      
+    <!-- API Password Section -->
       <div class="card bg-base-100 shadow mb-6">
         <div class="card-body">
           <h2 class="card-title text-lg">API Password</h2>
@@ -227,7 +227,7 @@ defmodule FuzzyRssWeb.ReaderLive.AccountSettings do
                   </svg>
                   <div>
                     <div class="font-bold">Your generated password (copy it now!):</div>
-                    <div class="font-mono text-sm"><%= @generated_password %></div>
+                    <div class="font-mono text-sm">{@generated_password}</div>
                   </div>
                 </div>
               <% end %>
@@ -239,15 +239,29 @@ defmodule FuzzyRssWeb.ReaderLive.AccountSettings do
                 <div class="collapse-content text-sm space-y-2">
                   <p><strong>For Fever API clients:</strong></p>
                   <ul class="list-disc list-inside ml-4 space-y-1">
-                    <li>Server URL: <code class="bg-base-300 px-1 rounded"><%= get_base_url() %>/fever/</code></li>
-                    <li>Email: <code class="bg-base-300 px-1 rounded"><%= @current_user.email %></code></li>
-                    <li>Password: Enter the password you set/generated earlier (your client will hash it)</li>
+                    <li>
+                      Server URL:
+                      <code class="bg-base-300 px-1 rounded">{get_base_url()}/fever/</code>
+                    </li>
+                    <li>
+                      Email: <code class="bg-base-300 px-1 rounded">{@current_user.email}</code>
+                    </li>
+                    <li>
+                      Password: Enter the password you set/generated earlier (your client will hash it)
+                    </li>
                   </ul>
                   <p class="mt-3"><strong>For Google Reader API clients:</strong></p>
                   <ul class="list-disc list-inside ml-4 space-y-1">
-                    <li>Server URL: <code class="bg-base-300 px-1 rounded"><%= get_base_url() %>/reader/api/0/</code></li>
-                    <li>Email: <code class="bg-base-300 px-1 rounded"><%= @current_user.email %></code></li>
-                    <li>Password: Enter the password you set/generated earlier (your client will hash it)</li>
+                    <li>
+                      Server URL:
+                      <code class="bg-base-300 px-1 rounded">{get_base_url()}/reader/api/0/</code>
+                    </li>
+                    <li>
+                      Email: <code class="bg-base-300 px-1 rounded">{@current_user.email}</code>
+                    </li>
+                    <li>
+                      Password: Enter the password you set/generated earlier (your client will hash it)
+                    </li>
                   </ul>
                   <p class="mt-3 text-xs text-base-content/60">
                     Note: Enter the plain-text password in your RSS client. The client will automatically hash it before sending. If you generated a random password, make sure you copied it from the green alert box when it was shown.

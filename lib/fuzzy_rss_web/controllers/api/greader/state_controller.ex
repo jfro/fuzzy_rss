@@ -62,12 +62,13 @@ defmodule FuzzyRssWeb.Api.GReader.StateController do
   defp parse_item_ids(nil), do: {:error, :no_items}
 
   defp parse_item_ids(ids) when is_list(ids) do
-    parsed = Enum.flat_map(ids, fn id ->
-      case IdConverter.parse_item_id(id) do
-        {:ok, entry_id} -> [entry_id]
-        _ -> []
-      end
-    end)
+    parsed =
+      Enum.flat_map(ids, fn id ->
+        case IdConverter.parse_item_id(id) do
+          {:ok, entry_id} -> [entry_id]
+          _ -> []
+        end
+      end)
 
     if Enum.empty?(parsed) do
       {:error, :invalid_ids}
@@ -145,12 +146,13 @@ defmodule FuzzyRssWeb.Api.GReader.StateController do
     opts = []
 
     # Parse optional timestamp parameter (ts in seconds)
-    opts = if ts = params["ts"] do
-      timestamp = String.to_integer(ts)
-      Keyword.put(opts, :older_than, timestamp)
-    else
-      opts
-    end
+    opts =
+      if ts = params["ts"] do
+        timestamp = String.to_integer(ts)
+        Keyword.put(opts, :older_than, timestamp)
+      else
+        opts
+      end
 
     # Add stream-specific filters
     case stream_type do

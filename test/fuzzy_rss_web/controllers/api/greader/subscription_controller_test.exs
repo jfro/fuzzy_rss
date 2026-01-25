@@ -60,10 +60,11 @@ defmodule FuzzyRssWeb.Api.GReader.SubscriptionControllerTest do
       # Recycle conn to keep session, then re-add auth
       conn = recycle(conn) |> auth_conn(api_key)
 
-      conn = post(conn, "/reader/api/0/subscription/quickadd", %{
-        "quickadd" => feed_url,
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/subscription/quickadd", %{
+          "quickadd" => feed_url,
+          "T" => session_token
+        })
 
       assert json = json_response(conn, 200)
       assert json["streamId"] == "feed/#{feed_url}"
@@ -74,9 +75,10 @@ defmodule FuzzyRssWeb.Api.GReader.SubscriptionControllerTest do
     end
 
     test "returns error without session token", %{conn: conn} do
-      conn = post(conn, "/reader/api/0/subscription/quickadd", %{
-        "quickadd" => "https://example.com/feed.xml"
-      })
+      conn =
+        post(conn, "/reader/api/0/subscription/quickadd", %{
+          "quickadd" => "https://example.com/feed.xml"
+        })
 
       assert json_response(conn, 400)
     end
@@ -91,12 +93,13 @@ defmodule FuzzyRssWeb.Api.GReader.SubscriptionControllerTest do
       folder = folder_fixture(user, %{name: "News"})
       feed_url = "https://example.com/news.xml"
 
-      conn = post(conn, "/reader/api/0/subscription/edit", %{
-        "ac" => "subscribe",
-        "s" => "feed/#{feed_url}",
-        "a" => "user/#{user.id}/label/News",
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/subscription/edit", %{
+          "ac" => "subscribe",
+          "s" => "feed/#{feed_url}",
+          "a" => "user/#{user.id}/label/News",
+          "T" => session_token
+        })
 
       assert text_response(conn, 200) == "OK"
 
@@ -117,12 +120,13 @@ defmodule FuzzyRssWeb.Api.GReader.SubscriptionControllerTest do
       feed = feed_fixture()
       _sub = subscription_fixture(user, feed, %{folder_id: folder1.id})
 
-      conn = post(conn, "/reader/api/0/subscription/edit", %{
-        "ac" => "edit",
-        "s" => "feed/#{feed.url}",
-        "a" => "user/#{user.id}/label/News",
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/subscription/edit", %{
+          "ac" => "edit",
+          "s" => "feed/#{feed.url}",
+          "a" => "user/#{user.id}/label/News",
+          "T" => session_token
+        })
 
       assert text_response(conn, 200) == "OK"
 
@@ -140,11 +144,12 @@ defmodule FuzzyRssWeb.Api.GReader.SubscriptionControllerTest do
       feed = feed_fixture()
       _sub = subscription_fixture(user, feed, %{folder_id: folder.id})
 
-      conn = post(conn, "/reader/api/0/subscription/edit", %{
-        "ac" => "edit",
-        "s" => "feed/#{feed.url}",
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/subscription/edit", %{
+          "ac" => "edit",
+          "s" => "feed/#{feed.url}",
+          "T" => session_token
+        })
 
       assert text_response(conn, 200) == "OK"
 
@@ -163,11 +168,12 @@ defmodule FuzzyRssWeb.Api.GReader.SubscriptionControllerTest do
       feed = feed_fixture()
       _sub = subscription_fixture(user, feed)
 
-      conn = post(conn, "/reader/api/0/subscription/edit", %{
-        "ac" => "unsubscribe",
-        "s" => "feed/#{feed.url}",
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/subscription/edit", %{
+          "ac" => "unsubscribe",
+          "s" => "feed/#{feed.url}",
+          "T" => session_token
+        })
 
       assert text_response(conn, 200) == "OK"
 
@@ -180,11 +186,12 @@ defmodule FuzzyRssWeb.Api.GReader.SubscriptionControllerTest do
       session_token = text_response(conn, 200)
       conn = recycle(conn) |> auth_conn(api_key)
 
-      conn = post(conn, "/reader/api/0/subscription/edit", %{
-        "ac" => "unsubscribe",
-        "s" => "feed/https://example.com/notsubscribed.xml",
-        "T" => session_token
-      })
+      conn =
+        post(conn, "/reader/api/0/subscription/edit", %{
+          "ac" => "unsubscribe",
+          "s" => "feed/https://example.com/notsubscribed.xml",
+          "T" => session_token
+        })
 
       assert text_response(conn, 200) == "OK"
     end

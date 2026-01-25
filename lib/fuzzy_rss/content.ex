@@ -564,11 +564,12 @@ defmodule FuzzyRss.Content do
     query = apply_order(query, order)
 
     # If exclude_read is true, filter out read entries
-    query = if exclude_read do
-      where(query, [e, s, ues], is_nil(ues.id) or ues.read == false)
-    else
-      query
-    end
+    query =
+      if exclude_read do
+        where(query, [e, s, ues], is_nil(ues.id) or ues.read == false)
+      else
+        query
+      end
 
     # For starred filter, also include archived starred entries
     if filter == :starred && is_nil(feed_id) && is_nil(folder_id) do
@@ -786,25 +787,33 @@ defmodule FuzzyRss.Content do
     # Resolve feed_url to feed_id if provided
     feed_id =
       cond do
-        opts[:feed_id] -> opts[:feed_id]
+        opts[:feed_id] ->
+          opts[:feed_id]
+
         opts[:feed_url] ->
           case repo().get_by(Feed, url: opts[:feed_url]) do
             nil -> nil
             feed -> feed.id
           end
-        true -> nil
+
+        true ->
+          nil
       end
 
     # Resolve folder_name to folder_id if provided
     folder_id =
       cond do
-        opts[:folder_id] -> opts[:folder_id]
+        opts[:folder_id] ->
+          opts[:folder_id]
+
         opts[:folder_name] ->
           case get_user_folder_by_name(user, opts[:folder_name]) do
             nil -> nil
             folder -> folder.id
           end
-        true -> nil
+
+        true ->
+          nil
       end
 
     query =
